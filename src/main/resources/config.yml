@@ -1,0 +1,8 @@
+useSQL: false
+memoryCacheExpirationTime: -1
+database:
+  host: localhost
+  user: CHANGETHIS
+  password: CHANGETHIS
+  database: CHANGETHIS
+  tablename: playeruuids

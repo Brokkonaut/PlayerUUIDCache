@@ -1,0 +1,10 @@
+name: ${project.artifactId}
+main: de.iani.playerUUIDCache.PlayerUUIDCache
+version: ${project.version}-${build.number}
+description: Cache UUIDs and names to avoid web lookups
+authors:
+  - Brokkonaut
+
+commands:
+  uuidcache:
+    description: PlayerUUIDCache
