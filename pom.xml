@@ -34,16 +34,20 @@
 			</plugin>
 		</plugins>
 	</build>
+	<ciManagement>
+		<system>jenkins</system>
+		<url>https://www.iani.de/jenkins/</url>
+	</ciManagement>
 	<distributionManagement>
 		<repository>
 			<id>nexus</id>
 			<name>Releases</name>
-			<url>https://iani.de/nexus/repository/maven-releases</url>
+			<url>https://iani.de/nexus/repository/releases</url>
 		</repository>
 		<snapshotRepository>
 			<id>nexus</id>
 			<name>Snapshot</name>
-			<url>https://iani.de/nexus/repository/maven-snapshots</url>
+			<url>https://iani.de/nexus/repository/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
 </project>
