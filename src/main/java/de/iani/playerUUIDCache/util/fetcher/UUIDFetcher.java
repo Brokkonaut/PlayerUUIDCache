@@ -91,6 +91,7 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
         connection.setUseCaches(false);
         connection.setDoInput(true);
         connection.setDoOutput(true);
+        connection.setConnectTimeout(5000);
         return connection;
     }
 
