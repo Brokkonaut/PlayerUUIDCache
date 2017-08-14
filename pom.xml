@@ -48,12 +48,12 @@
 		<repository>
 			<id>nexus</id>
 			<name>Releases</name>
-			<url>https://iani.de/nexus/repository/releases</url>
+			<url>https://www.iani.de/nexus/content/repositories/releases/</url>
 		</repository>
 		<snapshotRepository>
 			<id>nexus</id>
 			<name>Snapshot</name>
-			<url>https://iani.de/nexus/repository/snapshots</url>
+			<url>https://www.iani.de/nexus/content/repositories/snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
 </project>
