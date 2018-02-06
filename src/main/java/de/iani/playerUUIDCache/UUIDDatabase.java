@@ -5,16 +5,24 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashSet;
 import java.util.UUID;
+
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import com.destroystokyo.paper.profile.ProfileProperty;
 
 import de.iani.playerUUIDCache.util.sql.MySQLConnection;
 import de.iani.playerUUIDCache.util.sql.SQLConnection;
 import de.iani.playerUUIDCache.util.sql.SQLRunnable;
 
 public class UUIDDatabase {
-    private SQLConnection connection;
+    private final SQLConnection connection;
 
-    private String tableName;
+    private final String tableName;
+
+    private final String profilesTableName;
 
     private final String insertPlayer;
 
@@ -22,9 +30,18 @@ public class UUIDDatabase {
 
     private final String selectPlayerByName;
 
+    private final String insertPlayerProfile;
+
+    private final String selectPlayerProfileByUUID;
+
+    private final String deleteOldPlayerProfiles;
+
+    private boolean mayUseProfilesTable;
+
     public UUIDDatabase(SQLConfig config) throws SQLException {
         connection = new MySQLConnection(config.getHost(), config.getDatabase(), config.getUser(), config.getPassword());
         this.tableName = config.getTableName();
+        this.profilesTableName = config.getProfilesTableName();
 
         insertPlayer = "INSERT INTO " + tableName + " (uuid, name, lastSeen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, lastSeen = ?";
 
@@ -47,6 +64,31 @@ public class UUIDDatabase {
                 return null;
             }
         });
+
+        insertPlayerProfile = "INSERT INTO " + profilesTableName + " (uuid, profile, lastSeen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE profile = ?, lastSeen = ?";
+
+        selectPlayerProfileByUUID = "SELECT profile, lastSeen FROM " + profilesTableName + " WHERE uuid = ?";
+
+        deleteOldPlayerProfiles = "DELETE FROM " + profilesTableName + " WHERE lastSeen < ?";
+    }
+
+    public void createProfilePropertiesTable() throws SQLException {
+        this.connection.runCommands(new SQLRunnable<Void>() {
+            @Override
+            public Void execute(Connection connection, SQLConnection sqlConnection) throws SQLException {
+                if (!sqlConnection.hasTable(profilesTableName)) {
+                    Statement smt = connection.createStatement();
+                    smt.executeUpdate("CREATE TABLE `" + profilesTableName + "` ("//
+                            + "`uuid` CHAR( 36 ) NOT NULL,"//
+                            + "`profile` MEDIUMTEXT NOT NULL ,"//
+                            + "`lastSeen` BIGINT NOT NULL DEFAULT '0',"//
+                            + "PRIMARY KEY ( `uuid` ), INDEX ( `lastSeen` ) ) ENGINE = innodb");
+                    smt.close();
+                }
+                return null;
+            }
+        });
+        mayUseProfilesTable = true;
     }
 
     public void addOrUpdatePlayers(final CachedPlayer... entries) throws SQLException {
@@ -123,5 +165,80 @@ public class UUIDDatabase {
 
     public void disconnect() {
         connection.disconnect();
+    }
+
+    public void addOrUpdatePlayerProfile(CachedPlayerProfile entry) throws SQLException {
+        if (!mayUseProfilesTable) {
+            return;
+        }
+        this.connection.runCommands(new SQLRunnable<Void>() {
+            @Override
+            public Void execute(Connection connection, SQLConnection sqlConnection) throws SQLException {
+                PreparedStatement smt = sqlConnection.getOrCreateStatement(insertPlayerProfile);
+                smt.setString(1, entry.getUUID().toString());
+                YamlConfiguration yaml = new YamlConfiguration();
+                for (ProfileProperty pp : entry.getProperties()) {
+                    ConfigurationSection section = yaml.createSection(pp.getName());
+                    section.set("value", pp.getValue());
+                    section.set("signature", pp.getSignature());
+                }
+                String properties = yaml.saveToString();
+                smt.setString(2, properties);
+                smt.setLong(3, entry.getLastSeen());
+                smt.setString(4, properties);
+                smt.setLong(5, entry.getLastSeen());
+                smt.executeUpdate();
+                return null;
+            }
+        });
+    }
+
+    public CachedPlayerProfile getPlayerProfile(UUID uuid) throws SQLException {
+        if (!mayUseProfilesTable) {
+            return null;
+        }
+        return this.connection.runCommands(new SQLRunnable<CachedPlayerProfile>() {
+            @Override
+            public CachedPlayerProfile execute(Connection connection, SQLConnection sqlConnection) throws SQLException {
+                PreparedStatement smt = sqlConnection.getOrCreateStatement(selectPlayerProfileByUUID);
+                smt.setString(1, uuid.toString());
+                ResultSet rs = smt.executeQuery();
+                if (rs.next()) {
+                    YamlConfiguration yaml = new YamlConfiguration();
+                    try {
+                        yaml.loadFromString(rs.getString(1));
+                    } catch (Throwable t) {
+                        return null;
+                    }
+                    LinkedHashSet<ProfileProperty> properties = new LinkedHashSet<>();
+                    for (String name : yaml.getKeys(false)) {
+                        ConfigurationSection section = yaml.getConfigurationSection(name);
+                        if (section != null) {
+                            String value = section.getString("value");
+                            String signature = section.getString("signature");
+                            properties.add(new ProfileProperty(name, value, signature));
+                        }
+                    }
+
+                    long time = rs.getLong(2);
+                    rs.close();
+                    return new CachedPlayerProfile(uuid, properties, time, System.currentTimeMillis());
+                }
+                rs.close();
+                return null;
+            }
+        });
+    }
+
+    public void deleteOldPlayerProfiles() throws SQLException {
+        this.connection.runCommands(new SQLRunnable<Void>() {
+            @Override
+            public Void execute(Connection connection, SQLConnection sqlConnection) throws SQLException {
+                PreparedStatement smt = sqlConnection.getOrCreateStatement(deleteOldPlayerProfiles);
+                smt.setLong(1, System.currentTimeMillis() - PlayerUUIDCache.PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME);
+                smt.executeUpdate();
+                return null;
+            }
+        });
     }
 }

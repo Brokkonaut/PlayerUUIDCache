@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -23,16 +24,23 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
+import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
 import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
 
 public class PlayerUUIDCache extends JavaPlugin {
+    public static final long PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME = 1000 * 60 * 60 * 24;// 1 day
+    public static final long PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME = 1000 * 60 * 30;// 30 minutes
+
     protected PluginConfig config;
 
     protected HashMap<String, CachedPlayer> playersByName;
 
     protected HashMap<UUID, CachedPlayer> playersByUUID;
+
+    protected HashMap<UUID, CachedPlayerProfile> playerProfiles;
 
     protected UUIDDatabase database;
 
@@ -48,11 +56,57 @@ public class PlayerUUIDCache extends JavaPlugin {
 
     private int databaseQueries;
 
+    private int profilePropertiesLookups;
+
+    private int profilePropertiesLookupQueries;
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(new PlayerLoginListener(), this);
         reloadConfig();
+
+        getServer().getPluginManager().registerEvents(new PlayerLoginListener(), this);
+
+        try {
+            Class.forName("com.destroystokyo.paper.profile.PlayerProfile");// check if this is a Paper server with PlayerProfileAPI
+            getLogger().info("Paper Profile API detected, registering listener");
+            getServer().getPluginManager().registerEvents(new PaperProfileAPIListener(this), this);
+            if (config.useSQL()) {
+                getLogger().info("Using profile properties cache");
+                try {
+                    database.createProfilePropertiesTable();
+                    playerProfiles = new HashMap<>();
+                    getServer().getPluginManager().registerEvents(new PaperProfilePropertiesAPIListener(this), this);
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            synchronized (PlayerUUIDCache.this) {
+                                if (playerProfiles != null) {
+                                    Iterator<CachedPlayerProfile> it = playerProfiles.values().iterator();
+                                    while (it.hasNext()) {
+                                        CachedPlayerProfile entry = it.next();
+                                        if (entry.getLastSeen() + PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME <= System.currentTimeMillis()) {
+                                            it.remove();
+                                        }
+                                    }
+                                }
+                            }
+                            try {
+                                database.deleteOldPlayerProfiles();
+                            } catch (SQLException e) {
+                                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+                            }
+                        }
+                    }.runTaskTimerAsynchronously(this, (long) (Math.random() * 20 * 60 * 60 * 24), 20 * 60 * 60 * 24);
+                } catch (SQLException e) {
+                    getLogger().log(Level.SEVERE, "Could not create profiles table", e);
+                }
+            }
+        } catch (
+
+        ClassNotFoundException e) {
+            // ignore
+        }
     }
 
     @Override
@@ -119,6 +173,8 @@ public class PlayerUUIDCache extends JavaPlugin {
             sender.sendMessage("mojangQueries: " + mojangQueries);
             sender.sendMessage("databaseUpdates: " + databaseUpdates);
             sender.sendMessage("databaseQueries: " + databaseQueries);
+            sender.sendMessage("profilePropertiesLookups: " + profilePropertiesLookups);
+            sender.sendMessage("profilePropertiesLookupQueries: " + profilePropertiesLookupQueries);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("lookup")) {
             String nameOrId = args[1];
@@ -290,6 +346,7 @@ public class PlayerUUIDCache extends JavaPlugin {
             return;
         }
         getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
+
             @Override
             public void run() {
                 final CachedPlayer p = getPlayerFromMojang(playerName);
@@ -302,6 +359,7 @@ public class PlayerUUIDCache extends JavaPlugin {
                     });
                 }
             }
+
         });
     }
 
@@ -369,6 +427,7 @@ public class PlayerUUIDCache extends JavaPlugin {
             return;
         }
         getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
+
             @Override
             public void run() {
                 final CachedPlayer p = getPlayerFromMojang(playerUUID);
@@ -381,6 +440,7 @@ public class PlayerUUIDCache extends JavaPlugin {
                     });
                 }
             }
+
         });
     }
 
@@ -452,12 +512,12 @@ public class PlayerUUIDCache extends JavaPlugin {
                         }
                     }
                 }
-                if (oldEntry == null || oldEntry.getLastSeen() < entry.getLastSeen()) {
+                if (oldEntry == null || oldEntry.getLastSeen() <= entry.getLastSeen()) {
                     playersByUUID.put(entry.getUUID(), entry);
                 }
                 String newLowerName = entry.getName().toLowerCase();
                 oldEntry = playersByName.get(newLowerName);
-                if (oldEntry == null || oldEntry.getLastSeen() < entry.getLastSeen()) {
+                if (oldEntry == null || oldEntry.getLastSeen() <= entry.getLastSeen()) {
                     playersByName.put(newLowerName, entry);
                 }
             }
@@ -483,4 +543,121 @@ public class PlayerUUIDCache extends JavaPlugin {
             }
         }
     }
+
+    protected synchronized void updateProfileProperties(boolean updateDB, CachedPlayerProfile entry) {
+        if (playerProfiles != null) {
+            CachedPlayerProfile oldEntry = playerProfiles.get(entry.getUUID());
+            if (oldEntry == null || oldEntry.getLastSeen() <= entry.getLastSeen()) {
+                playerProfiles.put(entry.getUUID(), entry);
+            }
+        }
+        if (updateDB) {
+            if (database != null) {
+                try {
+                    databaseUpdates++;
+                    database.addOrUpdatePlayerProfile(entry);
+                } catch (SQLException e) {
+                    getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+                }
+            }
+        }
+    }
+
+    public CachedPlayerProfile getPlayerProfile(UUID playerUUID) {
+        profilePropertiesLookups++;
+        synchronized (this) {
+            if (playerProfiles != null) {
+                CachedPlayerProfile entry = playerProfiles.get(playerUUID);
+                if (entry != null) {
+                    long now = System.currentTimeMillis();
+                    if (entry.getCacheLoadTime() + PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME > now && entry.getLastSeen() + PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME > now) {
+                        return entry;
+                    } else {
+                        playerProfiles.remove(playerUUID);
+                    }
+                }
+            }
+        }
+        if (database != null) {
+            try {
+                profilePropertiesLookupQueries++;
+                CachedPlayerProfile entry = database.getPlayerProfile(playerUUID);
+                if (entry != null && entry.getLastSeen() + PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME > System.currentTimeMillis()) {
+                    updateProfileProperties(false, entry);
+                    return entry;
+                }
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+            }
+        }
+        return null;
+    }
+
+    public Future<CachedPlayerProfile> loadPlayerProfileAsynchronously(final UUID playerUUID) {
+        FutureTask<CachedPlayerProfile> futuretask = new FutureTask<>(new Callable<CachedPlayerProfile>() {
+            @Override
+            public CachedPlayerProfile call() throws Exception {
+                return getPlayerProfileFromMojang(playerUUID);
+            }
+        });
+        getServer().getScheduler().runTaskAsynchronously(this, futuretask);
+        return futuretask;
+    }
+
+    public CachedPlayerProfile getPlayerProfile(UUID playerUUID, boolean queryMojangIfUnknown) {
+        CachedPlayerProfile entry = getPlayerProfile(playerUUID);
+        if (entry != null || !queryMojangIfUnknown) {
+            return entry;
+        }
+        return getPlayerProfileFromMojang(playerUUID);
+    }
+
+    public void getPlayerProfileAsynchronously(final UUID playerUUID, final Callback<CachedPlayerProfile> synchronousCallback) {
+        final CachedPlayerProfile entry = getPlayerProfile(playerUUID);
+        if (entry != null) {
+            if (synchronousCallback != null) {
+                if (Bukkit.isPrimaryThread()) {
+                    synchronousCallback.onComplete(entry);
+                } else {
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
+                        @Override
+                        public void run() {
+                            synchronousCallback.onComplete(entry);
+                        }
+                    });
+                }
+            }
+            return;
+        }
+        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
+            @Override
+            public void run() {
+                final CachedPlayerProfile p = getPlayerProfileFromMojang(playerUUID);
+                if (synchronousCallback != null) {
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
+                        @Override
+                        public void run() {
+                            synchronousCallback.onComplete(p);
+                        }
+                    });
+                }
+            }
+
+        });
+    }
+
+    protected CachedPlayerProfile getPlayerProfileFromMojang(UUID playerUUID) {
+        mojangQueries++;
+        try {
+            CachedPlayerProfile entry = new ProfileFetcher(playerUUID).call();
+            if (entry != null) {
+                updateProfileProperties(true, entry);
+            }
+            return entry;
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Error while trying to load player", e);
+        }
+        return null;
+    }
+
 }

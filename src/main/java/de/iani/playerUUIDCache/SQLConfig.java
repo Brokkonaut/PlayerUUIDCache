@@ -13,6 +13,8 @@ public class SQLConfig {
 
     private String tablename = "playeruuids";
 
+    private String profilestablename = "playerprofiles";
+
     public SQLConfig(ConfigurationSection section) {
         if (section != null) {
             host = section.getString("host", host);
@@ -20,6 +22,7 @@ public class SQLConfig {
             password = section.getString("password", password);
             database = section.getString("database", database);
             tablename = section.getString("tablename", tablename);
+            profilestablename = section.getString("profilestablename", tablename);
         }
     }
 
@@ -41,5 +44,9 @@ public class SQLConfig {
 
     public String getTableName() {
         return tablename;
+    }
+
+    public String getProfilesTableName() {
+        return profilestablename;
     }
 }

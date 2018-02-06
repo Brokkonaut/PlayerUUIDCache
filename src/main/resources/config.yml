@@ -6,3 +6,4 @@ database:
   password: CHANGETHIS
   database: CHANGETHIS
   tablename: playeruuids
+  profilestablename: playerprofiles
