@@ -22,7 +22,7 @@ public class SQLConfig {
             password = section.getString("password", password);
             database = section.getString("database", database);
             tablename = section.getString("tablename", tablename);
-            profilestablename = section.getString("profilestablename", tablename);
+            profilestablename = section.getString("profilestablename", profilestablename);
         }
     }
 
