@@ -1,8 +1,14 @@
 package de.iani.playerUUIDCache;
 
+import java.util.Map;
 import java.util.UUID;
 
-public final class CachedPlayer {
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
+
+public final class CachedPlayer implements OfflinePlayer {
     private final UUID uuid;
 
     private final String name;
@@ -24,6 +30,7 @@ public final class CachedPlayer {
         return uuid;
     }
 
+    @Override
     public String getName() {
         return name;
     }
@@ -48,5 +55,70 @@ public final class CachedPlayer {
         }
         CachedPlayer other = (CachedPlayer) obj;
         return name.equalsIgnoreCase(other.name) && uuid.equals(other.uuid) && lastSeen == other.lastSeen;
+    }
+
+    @Override
+    public boolean isOp() {
+        return Bukkit.getOfflinePlayer(uuid).isOp();
+    }
+
+    @Override
+    public void setOp(boolean value) {
+        Bukkit.getOfflinePlayer(uuid).setOp(value);
+    }
+
+    @Override
+    public Map<String, Object> serialize() {
+        return Bukkit.getOfflinePlayer(uuid).serialize();
+    }
+
+    @Override
+    public boolean isOnline() {
+        return Bukkit.getPlayer(uuid) != null;
+    }
+
+    @Override
+    public UUID getUniqueId() {
+        return uuid;
+    }
+
+    @Override
+    public boolean isBanned() {
+        return Bukkit.getOfflinePlayer(uuid).isBanned();
+    }
+
+    @Override
+    public boolean isWhitelisted() {
+        return Bukkit.getOfflinePlayer(uuid).isWhitelisted();
+    }
+
+    @Override
+    public void setWhitelisted(boolean value) {
+        Bukkit.getOfflinePlayer(uuid).setWhitelisted(value);
+    }
+
+    @Override
+    public Player getPlayer() {
+        return Bukkit.getPlayer(uuid);
+    }
+
+    @Override
+    public long getFirstPlayed() {
+        return Bukkit.getOfflinePlayer(uuid).getFirstPlayed();
+    }
+
+    @Override
+    public long getLastPlayed() {
+        return Bukkit.getOfflinePlayer(uuid).getLastPlayed();
+    }
+
+    @Override
+    public boolean hasPlayedBefore() {
+        return Bukkit.getOfflinePlayer(uuid).hasPlayedBefore();
+    }
+
+    @Override
+    public Location getBedSpawnLocation() {
+        return Bukkit.getOfflinePlayer(uuid).getBedSpawnLocation();
     }
 }
