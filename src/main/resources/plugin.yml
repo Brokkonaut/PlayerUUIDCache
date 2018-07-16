@@ -4,6 +4,7 @@ version: ${project.version}-${build.number}
 description: Cache UUIDs and names to avoid web lookups
 authors:
   - Brokkonaut
+api-version: 1.13
 
 commands:
   uuidcache:
