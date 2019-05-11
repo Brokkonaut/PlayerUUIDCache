@@ -113,6 +113,7 @@ public final class CachedPlayer implements OfflinePlayer {
     }
 
     @Override
+    @Deprecated
     public long getLastPlayed() {
         return Bukkit.getOfflinePlayer(uuid).getLastPlayed();
     }
