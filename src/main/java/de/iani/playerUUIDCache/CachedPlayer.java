@@ -2,7 +2,6 @@ package de.iani.playerUUIDCache;
 
 import java.util.Map;
 import java.util.UUID;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -35,7 +34,13 @@ public final class CachedPlayer implements OfflinePlayer {
         return name;
     }
 
+    @Override
     public long getLastSeen() {
+        return lastSeen;
+    }
+
+    @Override
+    public long getLastLogin() {
         return lastSeen;
     }
 
