@@ -27,8 +27,11 @@ public class BinaryStorage {
     public BinaryStorage(PlayerUUIDCache plugin) throws IOException {
         this.plugin = plugin;
         filePositions = new HashMap<UUID, Integer>();
-        File dataFile = new File(plugin.getDataFolder(), "players.dat");
-        file = new RandomAccessFile(dataFile, "rw");
+        file = new RandomAccessFile(getDatabaseFile(plugin), "rw");
+    }
+
+    public static File getDatabaseFile(PlayerUUIDCache plugin) {
+        return new File(plugin.getDataFolder(), "players.dat");
     }
 
     public ArrayList<CachedPlayer> loadAllPlayers() throws IOException {

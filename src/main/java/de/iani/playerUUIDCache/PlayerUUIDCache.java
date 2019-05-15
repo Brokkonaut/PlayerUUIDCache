@@ -1,5 +1,8 @@
 package de.iani.playerUUIDCache;
 
+import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
+import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
+import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -13,7 +16,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
-
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -25,10 +27,6 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
-import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
-import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
 
 public class PlayerUUIDCache extends JavaPlugin {
     public static final long PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME = 1000 * 60 * 60 * 24;// 1 day
@@ -141,6 +139,20 @@ public class PlayerUUIDCache extends JavaPlugin {
             getLogger().info("Using mysql backend");
             try {
                 database = new UUIDDatabase(config.getSqlConfig());
+
+                if (BinaryStorage.getDatabaseFile(this).isFile()) {
+                    getLogger().info("Importing players from local file");
+                    try {
+                        BinaryStorage tempBinaryStorage = new BinaryStorage(this);
+                        ArrayList<CachedPlayer> allPlayers = tempBinaryStorage.loadAllPlayers();
+                        tempBinaryStorage.close();
+                        updateEntries(true, allPlayers.toArray(new CachedPlayer[allPlayers.size()]));
+                    } catch (IOException e) {
+                        getLogger().log(Level.SEVERE, "Error while trying to import from file backend", e);
+                    }
+                    BinaryStorage.getDatabaseFile(this).delete();
+                    getLogger().info("Import completed");
+                }
             } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
             }
@@ -150,7 +162,13 @@ public class PlayerUUIDCache extends JavaPlugin {
                 binaryStorage = new BinaryStorage(this);
                 ArrayList<CachedPlayer> allPlayers = binaryStorage.loadAllPlayers();
                 getLogger().info("Loaded " + allPlayers.size() + " players");
-                updateEntries(false, allPlayers.toArray(new CachedPlayer[allPlayers.size()]));
+                if (!allPlayers.isEmpty()) {
+                    updateEntries(false, allPlayers.toArray(new CachedPlayer[allPlayers.size()]));
+                } else {
+                    getLogger().info("Importing local players on first run");
+                    importLocalOfflinePlayers();
+                    getLogger().info("Import completed");
+                }
             } catch (IOException e) {
                 getLogger().log(Level.SEVERE, "Error while trying to access the storage file", e);
             }
@@ -161,10 +179,6 @@ public class PlayerUUIDCache extends JavaPlugin {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
             sender.sendMessage("No permission!");
-            return true;
-        }
-        if (args.length == 1 && args[0].equalsIgnoreCase("import")) {
-            importLocalOfflinePlayers();
             return true;
         }
         if (args.length == 1 && args[0].equalsIgnoreCase("stats")) {
@@ -192,7 +206,6 @@ public class PlayerUUIDCache extends JavaPlugin {
             }
             return true;
         }
-        sender.sendMessage(label + " import");
         sender.sendMessage(label + " lookup <player>");
         return true;
     }
@@ -220,6 +233,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         ArrayList<CachedPlayer> toUpdate = new ArrayList<>();
         for (OfflinePlayer p : getServer().getOfflinePlayers()) {
             if (p.getName() != null && p.getUniqueId() != null) {
+                @SuppressWarnings("deprecation")
                 long lastPlayed = p.getLastPlayed();
                 CachedPlayer knownPlayer = getPlayer(p.getUniqueId());
                 if (knownPlayer == null || knownPlayer.getLastSeen() < lastPlayed) {

@@ -1,5 +1,9 @@
 package de.iani.playerUUIDCache;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
+import de.iani.playerUUIDCache.util.sql.MySQLConnection;
+import de.iani.playerUUIDCache.util.sql.SQLConnection;
+import de.iani.playerUUIDCache.util.sql.SQLRunnable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,15 +11,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedHashSet;
 import java.util.UUID;
-
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-
-import com.destroystokyo.paper.profile.ProfileProperty;
-
-import de.iani.playerUUIDCache.util.sql.MySQLConnection;
-import de.iani.playerUUIDCache.util.sql.SQLConnection;
-import de.iani.playerUUIDCache.util.sql.SQLRunnable;
 
 public class UUIDDatabase {
     private final SQLConnection connection;

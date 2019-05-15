@@ -1,13 +1,11 @@
 package de.iani.playerUUIDCache;
 
-import java.util.UUID;
-
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-
 import com.destroystokyo.paper.event.profile.LookupProfileEvent;
 import com.destroystokyo.paper.event.profile.PreLookupProfileEvent;
 import com.destroystokyo.paper.profile.PlayerProfile;
+import java.util.UUID;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 
 public class PaperProfileAPIListener implements Listener {
     private final PlayerUUIDCache plugin;

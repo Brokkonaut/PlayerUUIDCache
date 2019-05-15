@@ -1,5 +1,7 @@
 package de.iani.playerUUIDCache.util.fetcher;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
+import de.iani.playerUUIDCache.CachedPlayerProfile;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -7,14 +9,9 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-
-import com.destroystokyo.paper.profile.ProfileProperty;
-
-import de.iani.playerUUIDCache.CachedPlayerProfile;
 
 public class ProfileFetcher implements Callable<CachedPlayerProfile> {
     private static final String PROFILE_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";

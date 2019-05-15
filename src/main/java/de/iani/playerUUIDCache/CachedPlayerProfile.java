@@ -1,11 +1,10 @@
 package de.iani.playerUUIDCache;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
-
-import com.destroystokyo.paper.profile.ProfileProperty;
 
 public class CachedPlayerProfile {
 
