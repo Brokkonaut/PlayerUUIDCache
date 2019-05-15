@@ -100,9 +100,7 @@ public class PlayerUUIDCache extends JavaPlugin {
                     getLogger().log(Level.SEVERE, "Could not create profiles table", e);
                 }
             }
-        } catch (
-
-        ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             // ignore
         }
     }
