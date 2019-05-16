@@ -25,10 +25,11 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class PlayerUUIDCache extends JavaPlugin {
+public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     public static final long PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME = 1000 * 60 * 60 * 24;// 1 day
     public static final long PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME = 1000 * 60 * 30;// 30 minutes
 
@@ -57,6 +58,7 @@ public class PlayerUUIDCache extends JavaPlugin {
     private int profilePropertiesLookups;
 
     private int profilePropertiesLookupQueries;
+    private boolean hasProfileAPI;
 
     @Override
     public void onEnable() {
@@ -100,9 +102,12 @@ public class PlayerUUIDCache extends JavaPlugin {
                     getLogger().log(Level.SEVERE, "Could not create profiles table", e);
                 }
             }
+            hasProfileAPI = true;
         } catch (ClassNotFoundException e) {
             // ignore
         }
+
+        getServer().getServicesManager().register(PlayerUUIDCacheAPI.class, this, this, ServicePriority.Normal);
     }
 
     @Override
@@ -185,8 +190,10 @@ public class PlayerUUIDCache extends JavaPlugin {
             sender.sendMessage("mojangQueries: " + mojangQueries);
             sender.sendMessage("databaseUpdates: " + databaseUpdates);
             sender.sendMessage("databaseQueries: " + databaseQueries);
-            sender.sendMessage("profilePropertiesLookups: " + profilePropertiesLookups);
-            sender.sendMessage("profilePropertiesLookupQueries: " + profilePropertiesLookupQueries);
+            if (hasProfileAPI) {
+                sender.sendMessage("profilePropertiesLookups: " + profilePropertiesLookups);
+                sender.sendMessage("profilePropertiesLookupQueries: " + profilePropertiesLookupQueries);
+            }
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("lookup")) {
             String nameOrId = args[1];
@@ -204,6 +211,7 @@ public class PlayerUUIDCache extends JavaPlugin {
             }
             return true;
         }
+        sender.sendMessage(label + " stats");
         sender.sendMessage(label + " lookup <player>");
         return true;
     }
@@ -244,14 +252,17 @@ public class PlayerUUIDCache extends JavaPlugin {
         }
     }
 
+    @Override
     public CachedPlayer getPlayer(OfflinePlayer player) {
         return getPlayer(player.getUniqueId());
     }
 
+    @Override
     public CachedPlayer getPlayerFromNameOrUUID(String playerNameOrUUID) {
         return getPlayerFromNameOrUUID(playerNameOrUUID, false);
     }
 
+    @Override
     public CachedPlayer getPlayerFromNameOrUUID(String playerNameOrUUID, boolean queryMojangIfUnknown) {
         playerNameOrUUID = playerNameOrUUID.trim();
         if (playerNameOrUUID.length() == 36) {
@@ -264,6 +275,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return getPlayer(playerNameOrUUID, queryMojangIfUnknown);
     }
 
+    @Override
     public Collection<CachedPlayer> getPlayers(Collection<String> playerNames, boolean queryMojangIfUnknown) {
         name2uuidLookups += playerNames.size();
         ArrayList<CachedPlayer> rv = new ArrayList<>();
@@ -294,6 +306,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return rv;
     }
 
+    @Override
     public CachedPlayer getPlayer(String playerName) {
         name2uuidLookups++;
         synchronized (this) {
@@ -321,6 +334,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return null;
     }
 
+    @Override
     public CachedPlayer getPlayer(String playerName, boolean queryMojangIfUnknown) {
         CachedPlayer entry = getPlayer(playerName);
         if (entry != null || !queryMojangIfUnknown) {
@@ -329,6 +343,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return getPlayerFromMojang(playerName);
     }
 
+    @Override
     public Future<CachedPlayer> loadPlayerAsynchronously(final String playerName) {
         FutureTask<CachedPlayer> futuretask = new FutureTask<>(new Callable<CachedPlayer>() {
             @Override
@@ -340,6 +355,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return futuretask;
     }
 
+    @Override
     public void getPlayerAsynchronously(final String playerName, final Callback<CachedPlayer> synchronousCallback) {
         final CachedPlayer entry = getPlayer(playerName);
         if (entry != null) {
@@ -375,6 +391,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         });
     }
 
+    @Override
     public CachedPlayer getPlayer(UUID playerUUID) {
         uuid2nameLookups++;
         synchronized (this) {
@@ -402,6 +419,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return null;
     }
 
+    @Override
     public CachedPlayer getPlayer(UUID playerUUID, boolean queryMojangIfUnknown) {
         CachedPlayer entry = getPlayer(playerUUID);
         if (entry != null || !queryMojangIfUnknown) {
@@ -410,6 +428,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return getPlayerFromMojang(playerUUID);
     }
 
+    @Override
     public Future<CachedPlayer> loadPlayerAsynchronously(final UUID playerUUID) {
         FutureTask<CachedPlayer> futuretask = new FutureTask<>(new Callable<CachedPlayer>() {
             @Override
@@ -421,6 +440,7 @@ public class PlayerUUIDCache extends JavaPlugin {
         return futuretask;
     }
 
+    @Override
     public void getPlayerAsynchronously(final UUID playerUUID, final Callback<CachedPlayer> synchronousCallback) {
         final CachedPlayer entry = getPlayer(playerUUID);
         if (entry != null) {

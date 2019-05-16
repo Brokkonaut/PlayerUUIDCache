@@ -25,10 +25,20 @@ public final class CachedPlayer implements OfflinePlayer {
         this.cacheLoadTime = cacheLoadTime;
     }
 
+    /**
+     * Gets the UUID of the cached player. This is never null.
+     *
+     * @return the UUID of the player
+     */
     public UUID getUUID() {
         return uuid;
     }
 
+    /**
+     * Gets the name of the cached player. This is never null, but the name might be outdated.
+     *
+     * @return the name of the player
+     */
     @Override
     public String getName() {
         return name;
