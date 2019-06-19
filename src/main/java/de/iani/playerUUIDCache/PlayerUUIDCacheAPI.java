@@ -168,4 +168,58 @@ public interface PlayerUUIDCacheAPI {
      * @return the CachedPlayer or null
      */
     CachedPlayer getPlayerFromNameOrUUID(String playerNameOrUUID, boolean queryMojangIfUnknown);
+
+    /**
+     * Gets a NameHistory for a UUID.
+     * The result may be null if this player's history is not found in the cache.
+     *
+     * @param playerUUID
+     *            the UUID of the player
+     * @return the NameHistory or null
+     */
+    NameHistory getNameHistory(UUID playerUUID);
+
+    /**
+     * Gets a NameHistory for a UUID.
+     * If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
+     * query is blocking, so avoid calling it in the main thread if possible.
+     * The result may be null if this player's history is not found in the cache.
+     * This method can be called from any thread.
+     *
+     * @param playerUUID
+     *            the UUID of the player
+     * @param queryMojangIfUnknown
+     *            query Mojang if this parameter is true and no entry is found in the cache
+     * @return the NameHistory or null
+     */
+    NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown);
+
+    /**
+     * Gets a NameHistory for a UUID asyncronously.
+     * If no entry is found in the cache this method will query Mojang. When the result is available,
+     * the callback is executed in the main thread. This query is not blocking the main thread.
+     * The callback will be called with null, if this player is not found.
+     * This method can be called from any thread.
+     *
+     * @param playerUUID
+     *            the UUID of the player
+     * @param synchronousCallback
+     *            a callback to execute when the result of the query to Mojang is completed
+     * @return the NameHistory or null
+     */
+    void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback);
+
+    /**
+     * Gets a NameHistory for a UUID from Mojang.
+     * This method will not query the cache but will always send a request to Mojang. If possible,
+     * you should call Future.get() in a seperate thread to avoid blocking the main thread.
+     * This method can be called from any thread.
+     *
+     * The Future will return null, if this player is not found.
+     *
+     * @param playerUUID
+     *            the UUID of the player
+     * @return a Future to query the result
+     */
+    Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID);
 }

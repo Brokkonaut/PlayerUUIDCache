@@ -78,7 +78,7 @@ public class BinaryStorage {
         return players;
     }
 
-    public void addOrUpdate(CachedPlayer player) throws IOException {
+    public void addOrUpdatePlayer(CachedPlayer player) throws IOException {
         if (!loaded) {
             throw new IllegalStateException("loadAllPlayers must be called first");
         }

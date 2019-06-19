@@ -1,18 +1,22 @@
 package de.iani.playerUUIDCache;
 
+import de.iani.playerUUIDCache.NameHistory.NameChange;
 import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
+import de.iani.playerUUIDCache.util.fetcher.NameHistoryFetcher;
 import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
 import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
@@ -41,22 +45,21 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     protected HashMap<UUID, CachedPlayerProfile> playerProfiles;
 
+    protected HashMap<UUID, NameHistory> nameHistories;
+
     protected UUIDDatabase database;
 
     private BinaryStorage binaryStorage;
 
     private int uuid2nameLookups;
-
     private int name2uuidLookups;
+    private int nameHistoryLookups;
 
     private int mojangQueries;
-
     private int databaseUpdates;
-
     private int databaseQueries;
 
     private int profilePropertiesLookups;
-
     private int profilePropertiesLookupQueries;
     private boolean hasProfileAPI;
 
@@ -134,9 +137,11 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         if (config.getMemoryCacheExpirationTime() != 0) {
             playersByName = new HashMap<>();
             playersByUUID = new HashMap<>();
+            nameHistories = new HashMap<>();
         } else {
             playersByName = null;
             playersByUUID = null;
+            nameHistories = null;
         }
         if (config.useSQL()) {
             getLogger().info("Using mysql backend");
@@ -187,6 +192,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         if (args.length == 1 && args[0].equalsIgnoreCase("stats")) {
             sender.sendMessage("uuid2nameLookups: " + uuid2nameLookups);
             sender.sendMessage("name2uuidLookups: " + name2uuidLookups);
+            sender.sendMessage("nameHistoryLookups: " + nameHistoryLookups);
             sender.sendMessage("mojangQueries: " + mojangQueries);
             sender.sendMessage("databaseUpdates: " + databaseUpdates);
             sender.sendMessage("databaseQueries: " + databaseQueries);
@@ -211,8 +217,37 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
             return true;
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("lookupHistory")) {
+            String idString = args[1];
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(idString);
+            } catch (IllegalArgumentException e) {
+                sender.sendMessage("Illegal UUID.");
+                return true;
+            }
+
+            NameHistory result = null;
+            result = getNameHistory(uuid, true);
+            if (result == null) {
+                sender.sendMessage("Unknown Account");
+            } else {
+                sender.sendMessage("First name: " + result.getFirstName());
+                if (result.getNameChanges().isEmpty()) {
+                    sender.sendMessage("(keine Umbenennungen)");
+                    return true;
+                }
+
+                DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+                for (NameChange change : result.getNameChanges()) {
+                    sender.sendMessage(format.format(new Date(change.getDate())) + ": change to " + change.getNewName());
+                }
+            }
+            return true;
+        }
         sender.sendMessage(label + " stats");
         sender.sendMessage(label + " lookup <player>");
+        sender.sendMessage(label + " lookupHistory <uuid>");
         return true;
     }
 
@@ -223,6 +258,8 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             UUID uuid = e.getPlayer().getUniqueId();
             long now = System.currentTimeMillis();
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
+
+            // TODO: name histories?
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
@@ -345,12 +382,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public Future<CachedPlayer> loadPlayerAsynchronously(final String playerName) {
-        FutureTask<CachedPlayer> futuretask = new FutureTask<>(new Callable<CachedPlayer>() {
-            @Override
-            public CachedPlayer call() throws Exception {
-                return getPlayerFromMojang(playerName);
-            }
-        });
+        FutureTask<CachedPlayer> futuretask = new FutureTask<>(() -> getPlayerFromMojang(playerName));
         getServer().getScheduler().runTaskAsynchronously(this, futuretask);
         return futuretask;
     }
@@ -363,31 +395,16 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 if (Bukkit.isPrimaryThread()) {
                     synchronousCallback.onComplete(entry);
                 } else {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(entry);
-                        }
-                    });
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(entry));
                 }
             }
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
-
-            @Override
-            public void run() {
-                final CachedPlayer p = getPlayerFromMojang(playerName);
-                if (synchronousCallback != null) {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(p);
-                        }
-                    });
-                }
+        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
+            final CachedPlayer p = getPlayerFromMojang(playerName);
+            if (synchronousCallback != null) {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(p));
             }
-
         });
     }
 
@@ -430,12 +447,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public Future<CachedPlayer> loadPlayerAsynchronously(final UUID playerUUID) {
-        FutureTask<CachedPlayer> futuretask = new FutureTask<>(new Callable<CachedPlayer>() {
-            @Override
-            public CachedPlayer call() throws Exception {
-                return getPlayerFromMojang(playerUUID);
-            }
-        });
+        FutureTask<CachedPlayer> futuretask = new FutureTask<>(() -> getPlayerFromMojang(playerUUID));
         getServer().getScheduler().runTaskAsynchronously(this, futuretask);
         return futuretask;
     }
@@ -448,31 +460,16 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 if (Bukkit.isPrimaryThread()) {
                     synchronousCallback.onComplete(entry);
                 } else {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(entry);
-                        }
-                    });
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(entry));
                 }
             }
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
-
-            @Override
-            public void run() {
-                final CachedPlayer p = getPlayerFromMojang(playerUUID);
-                if (synchronousCallback != null) {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(p);
-                        }
-                    });
-                }
+        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
+            final CachedPlayer p = getPlayerFromMojang(playerUUID);
+            if (synchronousCallback != null) {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(p));
             }
-
         });
     }
 
@@ -486,12 +483,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                     if (getServer().isPrimaryThread()) {
                         updateEntries(true, entry);
                     } else {
-                        getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                            @Override
-                            public void run() {
-                                updateEntries(true, entry);
-                            }
-                        });
+                        getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateEntries(true, entry));
                     }
                     return entry;
                 }
@@ -512,18 +504,29 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                     if (getServer().isPrimaryThread()) {
                         updateEntries(true, entry);
                     } else {
-                        getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                            @Override
-                            public void run() {
-                                updateEntries(true, entry);
-                            }
-                        });
+                        getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateEntries(true, entry));
                     }
                     return entry;
                 }
             }
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Error while trying to load player", e);
+        }
+        return null;
+    }
+
+    protected NameHistory getNameHistoryFromMojang(UUID playerUUID) {
+        mojangQueries++;
+        try {
+            NameHistory result = new NameHistoryFetcher(playerUUID).call();
+            if (getServer().isPrimaryThread()) {
+                updateHistory(true, result);
+            } else {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateHistory(true, result));
+            }
+            return result;
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Error while trying to load name history", e);
         }
         return null;
     }
@@ -567,7 +570,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 try {
                     databaseUpdates++;
                     for (CachedPlayer player : entries) {
-                        binaryStorage.addOrUpdate(player);
+                        binaryStorage.addOrUpdatePlayer(player);
                     }
                 } catch (IOException e) {
                     getLogger().log(Level.SEVERE, "Error while trying to access the storage file", e);
@@ -590,6 +593,31 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                     database.addOrUpdatePlayerProfile(entry);
                 } catch (SQLException e) {
                     getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+                }
+            }
+        }
+    }
+
+    protected synchronized void updateHistory(boolean updateDB, NameHistory history) {
+        if (nameHistories != null) {
+            NameHistory oldHistory = nameHistories.get(history.getUUID());
+            nameHistories.put(history.getUUID(), history);
+        }
+        if (updateDB) {
+            if (database != null) {
+                try {
+                    databaseUpdates++;
+                    database.addOrUpdateHistory(history);
+                } catch (SQLException e) {
+                    getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+                }
+            }
+            if (binaryStorage != null) {
+                try {
+                    databaseUpdates++;
+                    binaryStorage.addOrUpdateHistory(history);
+                } catch (IOException e) {
+                    getLogger().log(Level.SEVERE, "Error while trying to access the storage file", e);
                 }
             }
         }
@@ -626,12 +654,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     public Future<CachedPlayerProfile> loadPlayerProfileAsynchronously(final UUID playerUUID) {
-        FutureTask<CachedPlayerProfile> futuretask = new FutureTask<>(new Callable<CachedPlayerProfile>() {
-            @Override
-            public CachedPlayerProfile call() throws Exception {
-                return getPlayerProfileFromMojang(playerUUID);
-            }
-        });
+        FutureTask<CachedPlayerProfile> futuretask = new FutureTask<>(() -> getPlayerProfileFromMojang(playerUUID));
         getServer().getScheduler().runTaskAsynchronously(this, futuretask);
         return futuretask;
     }
@@ -651,30 +674,16 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 if (Bukkit.isPrimaryThread()) {
                     synchronousCallback.onComplete(entry);
                 } else {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(entry);
-                        }
-                    });
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(entry));
                 }
             }
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, new Runnable() {
-            @Override
-            public void run() {
-                final CachedPlayerProfile p = getPlayerProfileFromMojang(playerUUID);
-                if (synchronousCallback != null) {
-                    getServer().getScheduler().runTask(PlayerUUIDCache.this, new Runnable() {
-                        @Override
-                        public void run() {
-                            synchronousCallback.onComplete(p);
-                        }
-                    });
-                }
+        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
+            final CachedPlayerProfile p = getPlayerProfileFromMojang(playerUUID);
+            if (synchronousCallback != null) {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(p));
             }
-
         });
     }
 
@@ -689,6 +698,30 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Error while trying to load player", e);
         }
+        return null;
+    }
+
+    @Override
+    public NameHistory getNameHistory(UUID playerUUID) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID) {
+        // TODO Auto-generated method stub
         return null;
     }
 
