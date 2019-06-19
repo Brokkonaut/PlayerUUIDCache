@@ -4,8 +4,11 @@ version: ${project.version}-${build.number}
 description: Cache UUIDs and names to avoid web lookups
 authors:
   - Brokkonaut
+  - Starjon
 api-version: 1.13
 
 commands:
   uuidcache:
     description: PlayerUUIDCache
+
+softdepend: [GlobalDataClient]

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.iani.cubeside</groupId>
     <artifactId>PlayerUUIDCache</artifactId>
-    <version>1.5.1-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <build.number>DEV</build.number>
@@ -19,6 +19,12 @@
             <groupId>com.destroystokyo.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.14-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.cubeside</groupId>
+            <artifactId>globalconnectionbukkit</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
