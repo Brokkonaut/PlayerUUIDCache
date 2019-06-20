@@ -14,8 +14,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -600,7 +602,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     protected synchronized void updateHistory(boolean updateDB, NameHistory history) {
         if (nameHistories != null) {
-            NameHistory oldHistory = nameHistories.get(history.getUUID());
             nameHistories.put(history.getUUID(), history);
         }
         if (updateDB) {
@@ -610,14 +611,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                     database.addOrUpdateHistory(history);
                 } catch (SQLException e) {
                     getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
-                }
-            }
-            if (binaryStorage != null) {
-                try {
-                    databaseUpdates++;
-                    binaryStorage.addOrUpdateHistory(history);
-                } catch (IOException e) {
-                    getLogger().log(Level.SEVERE, "Error while trying to access the storage file", e);
                 }
             }
         }
@@ -723,6 +716,42 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     public Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID) {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public Set<UUID> getCurrentAndPreviousPlayers(String name) {
+        Set<UUID> result = null;
+        if (database != null) {
+            try {
+                databaseQueries++;
+                result = database.getKnownUsersFromHistory(name);
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+            }
+        }
+
+        if (result == null) {
+            result = new HashSet<>();
+            for (NameHistory history : nameHistories.values()) {
+                if (history.getFirstName().equals(name)) {
+                    result.add(history.getUUID());
+                    continue;
+                }
+                for (NameChange change : history.getNameChanges()) {
+                    if (change.getNewName().equals(name)) {
+                        result.add(history.getUUID());
+                        break;
+                    }
+                }
+            }
+        }
+
+        CachedPlayer current = getPlayer(name, false);
+        if (current != null) {
+            result.add(current.getUniqueId());
+        }
+
+        return result;
     }
 
 }

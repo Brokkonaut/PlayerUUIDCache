@@ -1,6 +1,7 @@
 package de.iani.playerUUIDCache;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Future;
 import org.bukkit.OfflinePlayer;
@@ -222,4 +223,14 @@ public interface PlayerUUIDCacheAPI {
      * @return a Future to query the result
      */
     Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID);
+
+    /**
+     * Returns the UUIDs of all player known to have used the given name in the past or present.
+     * This method will never query mojang. If no players are found, an empty set is returned.
+     * 
+     * @param name
+     *            the name to search for
+     * @return a set of all known players associated with that name
+     */
+    Set<UUID> getCurrentAndPreviousPlayers(String name);
 }

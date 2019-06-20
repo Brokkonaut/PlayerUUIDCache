@@ -15,6 +15,10 @@ public class SQLConfig {
 
     private String profilestablename = "playerprofiles";
 
+    private String namehistoriestablename = "namehistories";
+
+    private String namechangestablename = "namechanges";
+
     public SQLConfig(ConfigurationSection section) {
         if (section != null) {
             host = section.getString("host", host);
@@ -23,6 +27,8 @@ public class SQLConfig {
             database = section.getString("database", database);
             tablename = section.getString("tablename", tablename);
             profilestablename = section.getString("profilestablename", profilestablename);
+            namehistoriestablename = section.getString("namehistoriestablename", namehistoriestablename);
+            namechangestablename = section.getString("namechangestablename", namechangestablename);
         }
     }
 
@@ -48,5 +54,13 @@ public class SQLConfig {
 
     public String getProfilesTableName() {
         return profilestablename;
+    }
+
+    public String getNameHistoriesTableName() {
+        return namehistoriestablename;
+    }
+
+    public String getNameChangesTableName() {
+        return namechangestablename;
     }
 }
