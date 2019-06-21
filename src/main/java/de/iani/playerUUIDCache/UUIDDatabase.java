@@ -84,11 +84,11 @@ public class UUIDDatabase {
 
         deleteOldPlayerProfiles = "DELETE FROM " + profilesTableName + " WHERE lastSeen < ?";
 
-        insertNameHistory = "INSERT INTO " + nameHistoriesTableName + " (uuid, firstName, cacheLoadTime) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE firstName = ?, cacheLoadTime = ?";
+        insertNameHistory = "INSERT IGNORE INTO " + nameHistoriesTableName + " (uuid, firstName) VALUES (?, ?)";
 
         insertNameChange = "INSERT IGNORE INTO " + nameChangesTableName + " (uuid, date, newName) VALUES (?, ?, ?)";
 
-        selectNameHistory = "SELECT (firstName, cacheLoadTime) FROM " + nameHistoriesTableName + " WHERE uuid = ?";
+        selectNameHistory = "SELECT (firstName) FROM " + nameHistoriesTableName + " WHERE uuid = ?";
 
         selectNameChanges = "SELECT (date, newName) FROM " + nameChangesTableName + " WHERE uuid = ?";
 
@@ -100,7 +100,6 @@ public class UUIDDatabase {
                 smt.executeUpdate("CREATE TABLE `" + nameHistoriesTableName + "` ("//
                         + "`uuid` CHAR( 36 ) NOT NULL,"//
                         + "`firstName` VARCHAR( 16 ) NOT NULL,"//
-                        + "`cacheLoadTime` BIGINT NOT NULL,"//
                         + "PRIMARY KEY ( `uuid` ), INDEX ( `firstName` ) ) ENGINE = innodb");
                 smt.close();
             }
@@ -276,9 +275,6 @@ public class UUIDDatabase {
             PreparedStatement smt = sqlConnection.getOrCreateStatement(insertNameHistory);
             smt.setString(1, history.getUUID().toString());
             smt.setString(2, history.getFirstName());
-            smt.setLong(3, history.getCacheLoadTime());
-            smt.setString(4, history.getFirstName());
-            smt.setLong(5, history.getCacheLoadTime());
             smt.executeUpdate();
 
             smt = sqlConnection.getOrCreateStatement(insertNameChange);
@@ -305,7 +301,6 @@ public class UUIDDatabase {
             }
 
             String firstName = rs.getString(1);
-            long cacheLoadTime = rs.getLong(2);
             rs.close();
 
             smt = sqlConnection.getOrCreateStatement(selectNameChanges);
@@ -318,7 +313,7 @@ public class UUIDDatabase {
             }
             rs.close();
 
-            return new NameHistory(uuid, firstName, changes, cacheLoadTime);
+            return new NameHistory(uuid, firstName, changes, System.currentTimeMillis());
         });
     }
 

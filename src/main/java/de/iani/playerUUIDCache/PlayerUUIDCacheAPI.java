@@ -181,6 +181,19 @@ public interface PlayerUUIDCacheAPI {
     NameHistory getNameHistory(UUID playerUUID);
 
     /**
+     * Gets a NameHistory for a player.
+     * The result may be null if this player's history is not found in the cache.
+     * The OfflinePlayer must return a UUID.
+     *
+     * @param player
+     *            the player
+     * @return the NameHistory or null
+     */
+    default NameHistory getNameHistory(OfflinePlayer player) {
+        return getNameHistory(player.getUniqueId());
+    }
+
+    /**
      * Gets a NameHistory for a UUID.
      * If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
      * query is blocking, so avoid calling it in the main thread if possible.
@@ -194,6 +207,24 @@ public interface PlayerUUIDCacheAPI {
      * @return the NameHistory or null
      */
     NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown);
+
+    /**
+     * Gets a NameHistory for a player.
+     * If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
+     * query is blocking, so avoid calling it in the main thread if possible.
+     * The result may be null if this player's history is not found in the cache.
+     * This method can be called from any thread.
+     * The OfflinePlayer must return a UUID.
+     *
+     * @param player
+     *            the player
+     * @param queryMojangIfUnknown
+     *            query Mojang if this parameter is true and no entry is found in the cache
+     * @return the NameHistory or null
+     */
+    default NameHistory getNameHistory(OfflinePlayer player, boolean queryMojangIfUnknown) {
+        return getNameHistory(player.getUniqueId(), queryMojangIfUnknown);
+    }
 
     /**
      * Gets a NameHistory for a UUID asyncronously.
@@ -227,6 +258,9 @@ public interface PlayerUUIDCacheAPI {
     /**
      * Returns the UUIDs of all player known to have used the given name in the past or present.
      * This method will never query mojang. If no players are found, an empty set is returned.
+     * 
+     * This method will usually query the database. If no database is present, it will iterate
+     * over the entire memory cache. Expect according performance.
      * 
      * @param name
      *            the name to search for

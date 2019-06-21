@@ -261,7 +261,11 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             long now = System.currentTimeMillis();
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
 
-            // TODO: name histories?
+            NameHistory oldHistory = getNameHistory(e.getPlayer());
+            if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
+                PlayerUUIDCache.this.getNameHistoryAsynchronously(e.getPlayer().getUniqueId(), history -> {
+                });
+            }
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
@@ -270,6 +274,12 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             UUID uuid = e.getPlayer().getUniqueId();
             long now = System.currentTimeMillis();
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
+
+            NameHistory oldHistory = getNameHistory(e.getPlayer());
+            if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
+                PlayerUUIDCache.this.getNameHistoryAsynchronously(e.getPlayer().getUniqueId(), history -> {
+                });
+            }
         }
     }
 
@@ -696,26 +706,66 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public NameHistory getNameHistory(UUID playerUUID) {
-        // TODO Auto-generated method stub
-        return null;
+        return getNameHistory(playerUUID, false);
     }
 
     @Override
     public NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown) {
-        // TODO Auto-generated method stub
-        return null;
+        nameHistoryLookups++;
+        NameHistory result;
+        synchronized (this) {
+            result = nameHistories.get(playerUUID);
+            if (result != null) {
+                if (config.getMemoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getMemoryCacheExpirationTime() > System.currentTimeMillis()) {
+                    return result;
+                }
+            }
+        }
+
+        if (database != null) {
+            try {
+                result = database.getNameHistory(playerUUID);
+                if (result != null) {
+                    return result;
+                }
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+            }
+        }
+
+        if (!queryMojangIfUnknown) {
+            return null;
+        }
+
+        return getNameHistoryFromMojang(playerUUID);
     }
 
     @Override
     public void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback) {
-        // TODO Auto-generated method stub
-
+        final NameHistory history = getNameHistory(playerUUID);
+        if (history != null) {
+            if (synchronousCallback != null) {
+                if (Bukkit.isPrimaryThread()) {
+                    synchronousCallback.onComplete(history);
+                } else {
+                    getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(history));
+                }
+            }
+            return;
+        }
+        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
+            final NameHistory h = getNameHistoryFromMojang(playerUUID);
+            if (synchronousCallback != null) {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(h));
+            }
+        });
     }
 
     @Override
     public Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID) {
-        // TODO Auto-generated method stub
-        return null;
+        FutureTask<NameHistory> futuretask = new FutureTask<>(() -> getNameHistoryFromMojang(playerUUID));
+        getServer().getScheduler().runTaskAsynchronously(this, futuretask);
+        return futuretask;
     }
 
     @Override

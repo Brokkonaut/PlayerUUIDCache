@@ -7,18 +7,18 @@ import java.util.List;
 import java.util.UUID;
 
 public class NameHistory {
-    
+
     public static class NameChange implements Comparable<NameChange> {
-        
+
         private String newName;
         private long date;
-        
+
         public NameChange(String newName, long date) {
             com.google.common.base.Preconditions.checkNotNull(newName);
             this.newName = newName;
             this.date = date;
         }
-        
+
         /**
          * Returns the name the player adopted with this change.
          * 
@@ -27,7 +27,7 @@ public class NameHistory {
         public String getNewName() {
             return this.newName;
         }
-        
+
         /**
          * Returns the date at which this change was performed, as a unix epoch timestamp in ms.
          * 
@@ -36,53 +36,53 @@ public class NameHistory {
         public long getDate() {
             return this.date;
         }
-        
+
         @Override
         public int hashCode() {
             int result = this.newName.hashCode();
             result += 31 * Long.hashCode(this.date);
             return result;
         }
-        
+
         @Override
         public boolean equals(Object other) {
             if (!(other instanceof NameChange)) {
                 return false;
             }
-            
+
             NameChange onc = (NameChange) other;
             return this.newName.equals(onc.newName) && this.date == onc.date;
         }
-        
+
         @Override
         public int compareTo(NameChange other) {
             if (other == null) {
                 throw new NullPointerException();
             }
-            
+
             return Long.compare(this.date, other.date);
         }
     }
-    
+
     private final UUID uuid;
     private final String firstName;
     private final List<NameChange> changes;
-    
+
     private long cacheLoadTime;
-    
+
     public NameHistory(UUID uuid, String firstName, List<NameChange> changes, long cacheLoadTime) {
         com.google.common.base.Preconditions.checkNotNull(uuid);
         com.google.common.base.Preconditions.checkNotNull(firstName);
         com.google.common.base.Preconditions.checkNotNull(changes);
-        
+
         this.uuid = uuid;
         this.firstName = firstName;
         changes.sort(null);
         this.changes = Collections.unmodifiableList(new ArrayList<>(changes));
-        
+
         this.cacheLoadTime = cacheLoadTime;
     }
-    
+
     /**
      * Returns the uuid of the player with this history.
      * 
@@ -91,7 +91,7 @@ public class NameHistory {
     public UUID getUUID() {
         return this.uuid;
     }
-    
+
     /**
      * Returns the first name the player with this history ever had.
      * 
@@ -100,7 +100,7 @@ public class NameHistory {
     public String getFirstName() {
         return this.firstName;
     }
-    
+
     /**
      * Returns a list of all name changes the player with this history had, in chronological order.
      * 
@@ -109,7 +109,7 @@ public class NameHistory {
     public List<NameChange> getNameChanges() {
         return this.changes;
     }
-    
+
     /**
      * Returns the name the player with this history had at the given date.
      * 
@@ -118,7 +118,8 @@ public class NameHistory {
      * all dates lying in the future, the current name is returned. If the given date matches that
      * of one change exactly, that changes new name is returned.
      * 
-     * @param date a date as unix epoch timestamp in ms
+     * @param date
+     *            a date as unix epoch timestamp in ms
      * @return the name the player with this history had at the given date
      */
     public String getName(long date) {
@@ -128,7 +129,7 @@ public class NameHistory {
         }
         return change.getNewName();
     }
-    
+
     /**
      * Returns the name the player with this history had at the given date.
      * 
@@ -137,18 +138,19 @@ public class NameHistory {
      * all dates lying in the future, the current name is returned. If the given date matches that
      * of one change exactly, that changes new name is returned.
      * 
-     * @param date a date
+     * @param date
+     *            a date
      * @return the name the player with this history had at the given date
      */
     public String getName(Date date) {
         return getName(date.getTime());
     }
-    
+
     private NameChange getLastChange(long date) {
         if (this.changes.isEmpty() || this.changes.get(0).getDate() > date) {
             return null;
         }
-        
+
         int upper = this.changes.size();
         int lower = 0;
         while (upper - lower > 1) {
@@ -159,12 +161,12 @@ public class NameHistory {
                 upper = index;
             }
         }
-        
+
         return this.changes.get(lower);
     }
-    
+
     long getCacheLoadTime() {
         return this.cacheLoadTime;
     }
-    
+
 }
