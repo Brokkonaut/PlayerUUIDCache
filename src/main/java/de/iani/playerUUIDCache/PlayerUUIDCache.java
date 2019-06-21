@@ -527,22 +527,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         return null;
     }
 
-    protected NameHistory getNameHistoryFromMojang(UUID playerUUID) {
-        mojangQueries++;
-        try {
-            NameHistory result = new NameHistoryFetcher(playerUUID).call();
-            if (getServer().isPrimaryThread()) {
-                updateHistory(true, result);
-            } else {
-                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateHistory(true, result));
-            }
-            return result;
-        } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while trying to load name history", e);
-        }
-        return null;
-    }
-
     protected synchronized void updateEntries(boolean updateDB, CachedPlayer... entries) {
         if (entries == null || entries.length == 0) {
             return;
@@ -603,22 +587,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 try {
                     databaseUpdates++;
                     database.addOrUpdatePlayerProfile(entry);
-                } catch (SQLException e) {
-                    getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
-                }
-            }
-        }
-    }
-
-    protected synchronized void updateHistory(boolean updateDB, NameHistory history) {
-        if (nameHistories != null) {
-            nameHistories.put(history.getUUID(), history);
-        }
-        if (updateDB) {
-            if (database != null) {
-                try {
-                    databaseUpdates++;
-                    database.addOrUpdateHistory(history);
                 } catch (SQLException e) {
                     getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
                 }
@@ -723,6 +691,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
 
         if (database != null) {
+            databaseQueries++;
             try {
                 result = database.getNameHistory(playerUUID);
                 if (result != null) {
@@ -802,6 +771,38 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
 
         return result;
+    }
+
+    protected NameHistory getNameHistoryFromMojang(UUID playerUUID) {
+        mojangQueries++;
+        try {
+            NameHistory result = new NameHistoryFetcher(playerUUID).call();
+            if (getServer().isPrimaryThread()) {
+                updateHistory(true, result);
+            } else {
+                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateHistory(true, result));
+            }
+            return result;
+        } catch (Exception e) {
+            getLogger().log(Level.SEVERE, "Error while trying to load name history", e);
+        }
+        return null;
+    }
+
+    protected synchronized void updateHistory(boolean updateDB, NameHistory history) {
+        if (nameHistories != null) {
+            nameHistories.put(history.getUUID(), history);
+        }
+        if (updateDB) {
+            if (database != null) {
+                try {
+                    databaseUpdates++;
+                    database.addOrUpdateHistory(history);
+                } catch (SQLException e) {
+                    getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+                }
+            }
+        }
     }
 
 }
