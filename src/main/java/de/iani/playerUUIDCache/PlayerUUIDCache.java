@@ -53,16 +53,16 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     private BinaryStorage binaryStorage;
 
-    private int uuid2nameLookups;
-    private int name2uuidLookups;
-    private int nameHistoryLookups;
+    private volatile int uuid2nameLookups;
+    private volatile int name2uuidLookups;
+    private volatile int nameHistoryLookups;
 
-    private int mojangQueries;
-    private int databaseUpdates;
-    private int databaseQueries;
+    private volatile int mojangQueries;
+    private volatile int databaseUpdates;
+    private volatile int databaseQueries;
 
-    private int profilePropertiesLookups;
-    private int profilePropertiesLookupQueries;
+    private volatile int profilePropertiesLookups;
+    private volatile int profilePropertiesLookupQueries;
     private boolean hasProfileAPI;
 
     @Override
