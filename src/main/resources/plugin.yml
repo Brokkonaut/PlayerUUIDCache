@@ -10,5 +10,3 @@ api-version: 1.13
 commands:
   uuidcache:
     description: PlayerUUIDCache
-
-softdepend: [GlobalDataClient]
