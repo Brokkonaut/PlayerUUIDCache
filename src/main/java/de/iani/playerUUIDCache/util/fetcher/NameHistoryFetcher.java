@@ -31,11 +31,15 @@ public class NameHistoryFetcher implements Callable<NameHistory> {
         HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL_PREFIX + uuid.toString().replace("-", "") + PROFILE_URL_SUFFIX).openConnection();
         connection.setConnectTimeout(5000);
         long time = System.currentTimeMillis();
-        JsonArray response = (JsonArray) jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+        JsonElement response = jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+        if (response.isJsonNull()) {
+            return null;
+        }
+        JsonArray array = (JsonArray) response;
 
         String firstName = null;
         List<NameChange> changes = new ArrayList<>();
-        for (JsonElement element : response) {
+        for (JsonElement element : array) {
             JsonObject object = (JsonObject) element;
 
             String name = object.get("name").getAsString();
