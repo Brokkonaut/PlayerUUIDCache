@@ -695,6 +695,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             try {
                 result = database.getNameHistory(playerUUID);
                 if (result != null) {
+                    updateHistory(false, result);
                     return result;
                 }
             } catch (SQLException e) {
