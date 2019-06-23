@@ -1,5 +1,9 @@
 package de.iani.playerUUIDCache.util.fetcher;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -12,8 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 /**
  * From https://gist.github.com/evilmidget38/26d70114b834f71fb3b4
@@ -25,7 +27,7 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
 
     private static final String PROFILE_URL = "https://api.mojang.com/profiles/minecraft";
 
-    private final JSONParser jsonParser = new JSONParser();
+    private final JsonParser jsonParser = new JsonParser();
 
     private final ArrayList<String> names;
 
@@ -54,17 +56,21 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
 
     @Override
     public Map<String, UUID> call() throws Exception {
-        Map<String, UUID> uuidMap = new HashMap<String, UUID>();
+        Map<String, UUID> uuidMap = new HashMap<>();
         int requests = (names.size() + PROFILES_PER_REQUEST - 1) / PROFILES_PER_REQUEST;
         for (int i = 0; i < requests; i++) {
             HttpURLConnection connection = createConnection();
             String body = JSONArray.toJSONString(names.subList(i * PROFILES_PER_REQUEST, Math.min((i + 1) * PROFILES_PER_REQUEST, names.size())));
             writeBody(connection, body);
-            JSONArray array = (JSONArray) jsonParser.parse(new InputStreamReader(connection.getInputStream()));
-            for (Object profile : array) {
-                JSONObject jsonProfile = (JSONObject) profile;
-                String id = (String) jsonProfile.get("id");
-                String name = (String) jsonProfile.get("name");
+            JsonElement response = jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+            if (response.isJsonNull()) {
+                continue;
+            }
+            JsonArray array = (JsonArray) response;
+            for (JsonElement profile : array) {
+                JsonObject jsonObject = (JsonObject) profile;
+                String id = jsonObject.get("id").getAsString();
+                String name = jsonObject.get("name").getAsString();
                 UUID uuid = getUUIDFromMojangString(id);
                 uuidMap.put(name, uuid);
             }

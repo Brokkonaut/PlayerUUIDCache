@@ -777,6 +777,9 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         mojangQueries++;
         try {
             NameHistory result = new NameHistoryFetcher(playerUUID).call();
+            if (result == null) {
+                return null;
+            }
             if (getServer().isPrimaryThread()) {
                 updateHistory(true, result);
             } else {
