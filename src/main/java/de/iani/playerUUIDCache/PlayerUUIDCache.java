@@ -202,6 +202,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 sender.sendMessage("profilePropertiesLookups: " + profilePropertiesLookups);
                 sender.sendMessage("profilePropertiesLookupQueries: " + profilePropertiesLookupQueries);
             }
+            return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("lookup")) {
             String nameOrId = args[1];
@@ -263,8 +264,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
             NameHistory oldHistory = getNameHistory(e.getPlayer());
             if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
-                PlayerUUIDCache.this.getNameHistoryAsynchronously(e.getPlayer().getUniqueId(), history -> {
-                });
+                PlayerUUIDCache.this.loadNameHistoryAsynchronously(e.getPlayer().getUniqueId());
             }
         }
 
@@ -277,8 +277,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
             NameHistory oldHistory = getNameHistory(e.getPlayer());
             if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
-                PlayerUUIDCache.this.getNameHistoryAsynchronously(e.getPlayer().getUniqueId(), history -> {
-                });
+                PlayerUUIDCache.this.loadNameHistoryAsynchronously(e.getPlayer().getUniqueId());
             }
         }
     }

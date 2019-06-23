@@ -88,11 +88,11 @@ public class UUIDDatabase {
 
         insertNameChange = "INSERT IGNORE INTO " + nameChangesTableName + " (uuid, date, newName) VALUES (?, ?, ?)";
 
-        selectNameHistory = "SELECT (firstName) FROM " + nameHistoriesTableName + " WHERE uuid = ?";
+        selectNameHistory = "SELECT firstName FROM " + nameHistoriesTableName + " WHERE uuid = ?";
 
-        selectNameChanges = "SELECT (date, newName) FROM " + nameChangesTableName + " WHERE uuid = ?";
+        selectNameChanges = "SELECT date, newName FROM " + nameChangesTableName + " WHERE uuid = ?";
 
-        selectNameUsers = "SELECT (uuid) FROM " + nameHistoriesTableName + " WHERE firstName = ? UNION SLEECT (uuid) FROM " + nameChangesTableName + " WHERE newName = ?";
+        selectNameUsers = "SELECT uuid FROM " + nameHistoriesTableName + " WHERE firstName = ? UNION SLEECT (uuid) FROM " + nameChangesTableName + " WHERE newName = ?";
 
         this.connection.runCommands((connection, sqlConnection) -> {
             if (!sqlConnection.hasTable(nameHistoriesTableName)) {
