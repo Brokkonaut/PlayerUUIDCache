@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.iani.playerUUIDCache.NameHistory;
 import de.iani.playerUUIDCache.NameHistory.NameChange;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -31,7 +32,11 @@ public class NameHistoryFetcher implements Callable<NameHistory> {
         HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL_PREFIX + uuid.toString().replace("-", "") + PROFILE_URL_SUFFIX).openConnection();
         connection.setConnectTimeout(5000);
         long time = System.currentTimeMillis();
-        JsonElement response = jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+        InputStream is = connection.getInputStream();
+        if (is == null) {
+            return null;
+        }
+        JsonElement response = jsonParser.parse(new InputStreamReader(is));
         if (response.isJsonNull()) {
             return null;
         }

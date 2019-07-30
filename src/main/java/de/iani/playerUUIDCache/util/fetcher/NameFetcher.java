@@ -3,6 +3,7 @@ package de.iani.playerUUIDCache.util.fetcher;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -30,7 +31,11 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
         for (UUID uuid : uuids) {
             HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL + uuid.toString().replace("-", "")).openConnection();
             connection.setConnectTimeout(5000);
-            JsonElement response = jsonParser.parse(new InputStreamReader(connection.getInputStream()));
+            InputStream is = connection.getInputStream();
+            if (is == null) {
+                continue;
+            }
+            JsonElement response = jsonParser.parse(new InputStreamReader(is));
             if (response.isJsonNull()) {
                 continue;
             }
