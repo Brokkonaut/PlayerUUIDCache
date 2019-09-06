@@ -1,6 +1,7 @@
 package de.iani.playerUUIDCache;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Future;
@@ -169,6 +170,18 @@ public interface PlayerUUIDCacheAPI {
      * @return the CachedPlayer or null
      */
     CachedPlayer getPlayerFromNameOrUUID(String playerNameOrUUID, boolean queryMojangIfUnknown);
+
+    /**
+     * Searches for all known players whose names contain the given string. If a database is present, it will be used.
+     * If no database is present, or if the database query fails, the local cache will be used. If no lokal cache is
+     * present, null will be returned. This will never query Mojang. The resulting list is ordered by when the players
+     * were last seen on the server, with players seen more recently coming first.
+     *
+     * @param partialName
+     *            a part of a name to search for
+     * @return a List of CachedPlayers whose names contain that part
+     */
+    List<CachedPlayer> searchPlayersByPartialName(String partialName);
 
     /**
      * Gets a NameHistory for a UUID.

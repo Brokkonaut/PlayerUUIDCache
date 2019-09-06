@@ -16,6 +16,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
@@ -524,6 +525,33 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             getLogger().log(Level.SEVERE, "Error while trying to load player", e);
         }
         return null;
+    }
+
+    @Override
+    public List<CachedPlayer> searchPlayersByPartialName(String partialName) {
+        List<CachedPlayer> result = null;
+        if (database != null) {
+            databaseQueries++;
+            try {
+                result = database.searchPlayers(partialName);
+                updateEntries(false, result.toArray(new CachedPlayer[result.size()]));
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+            }
+        }
+        if (result == null && playersByUUID != null) {
+            partialName = partialName.toLowerCase();
+            result = new ArrayList<>();
+            for (CachedPlayer player : playersByUUID.values()) {
+                if (player.getName().toLowerCase().contains(partialName)) {
+                    result.add(player);
+                }
+            }
+            result.sort((p1, p2) -> -1 * Long.compare(p1.getLastSeen(), p2.getLastSeen()));
+        }
+
+        return result;
+
     }
 
     protected synchronized void updateEntries(boolean updateDB, CachedPlayer... entries) {

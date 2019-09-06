@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import de.iani.playerUUIDCache.NameHistory.NameChange;
 import de.iani.playerUUIDCache.util.sql.MySQLConnection;
 import de.iani.playerUUIDCache.util.sql.SQLConnection;
+import de.iani.playerUUIDCache.util.sql.SQLUtil;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -34,6 +35,8 @@ public class UUIDDatabase {
 
     private final String selectPlayerByName;
 
+    private final String searchPlayersByPartialName;
+
     private final String insertPlayerProfile;
 
     private final String selectPlayerProfileByUUID;
@@ -54,16 +57,18 @@ public class UUIDDatabase {
 
     public UUIDDatabase(SQLConfig config) throws SQLException {
         connection = new MySQLConnection(config.getHost(), config.getDatabase(), config.getUser(), config.getPassword());
-        this.tableName = config.getTableName();
-        this.profilesTableName = config.getProfilesTableName();
-        this.nameHistoriesTableName = config.getNameHistoriesTableName();
-        this.nameChangesTableName = config.getNameChangesTableName();
+        tableName = config.getTableName();
+        profilesTableName = config.getProfilesTableName();
+        nameHistoriesTableName = config.getNameHistoriesTableName();
+        nameChangesTableName = config.getNameChangesTableName();
 
         insertPlayer = "INSERT INTO " + tableName + " (uuid, name, lastSeen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, lastSeen = ?";
 
         selectPlayerByUUID = "SELECT name, lastSeen FROM " + tableName + " WHERE uuid = ?";
 
         selectPlayerByName = "SELECT uuid, name, lastSeen FROM " + tableName + " WHERE name = ?";
+
+        searchPlayersByPartialName = "SELECT uuid, name, lastSeen FROM " + tableName + " WHERE name LIKE ? ORDER BY lastSeen DESC";
 
         this.connection.runCommands((connection, sqlConnection) -> {
             if (!sqlConnection.hasTable(tableName)) {
@@ -197,6 +202,28 @@ public class UUIDDatabase {
                 return new CachedPlayer(uuid, realName, time, System.currentTimeMillis());
             }
             return null;
+        });
+    }
+
+    public List<CachedPlayer> searchPlayers(final String partialName) throws SQLException {
+        return this.connection.runCommands((connection, sqlConnection) -> {
+            PreparedStatement smt = sqlConnection.getOrCreateStatement(searchPlayersByPartialName);
+            smt.setString(1, "%" + SQLUtil.escapeLike(partialName) + "%");
+            ResultSet rs = smt.executeQuery();
+
+            List<CachedPlayer> result = new ArrayList<>();
+            while (rs.next()) {
+                try {
+                    UUID uuid = UUID.fromString(rs.getString(1));
+                    String name = rs.getString(2);
+                    long time = rs.getLong(3);
+                    result.add(new CachedPlayer(uuid, name, time, System.currentTimeMillis()));
+                } catch (IllegalArgumentException e) {
+                    // ignore invalid uuid
+                }
+            }
+            rs.close();
+            return result;
         });
     }
 
