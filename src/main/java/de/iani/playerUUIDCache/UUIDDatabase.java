@@ -97,7 +97,7 @@ public class UUIDDatabase {
 
         selectNameChanges = "SELECT date, newName FROM " + nameChangesTableName + " WHERE uuid = ?";
 
-        selectNameUsers = "SELECT uuid FROM " + nameHistoriesTableName + " WHERE firstName = ? UNION SLEECT (uuid) FROM " + nameChangesTableName + " WHERE newName = ?";
+        selectNameUsers = "(SELECT uuid FROM " + nameHistoriesTableName + " WHERE firstName = ?) UNION (SELECT uuid FROM " + nameChangesTableName + " WHERE newName = ?)";
 
         this.connection.runCommands((connection, sqlConnection) -> {
             if (!sqlConnection.hasTable(nameHistoriesTableName)) {
