@@ -1,5 +1,7 @@
 useSQL: false
 memoryCacheExpirationTime: -1
+# default for nameHistoryCacheExpirationTime: 30 days (2592000000 milliseconds)
+nameHistoryCacheExpirationTime: 2592000000
 database:
   host: localhost
   user: CHANGETHIS

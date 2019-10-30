@@ -223,12 +223,17 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("lookupHistory")) {
             String idString = args[1];
+            CachedPlayer cachedPlayer = getPlayerFromNameOrUUID(idString, true);
             UUID uuid;
-            try {
-                uuid = UUID.fromString(idString);
-            } catch (IllegalArgumentException e) {
-                sender.sendMessage("Illegal UUID.");
-                return true;
+            if (cachedPlayer != null) {
+                uuid = cachedPlayer.getUniqueId();
+            } else {
+                try {
+                    uuid = UUID.fromString(idString);
+                } catch (IllegalArgumentException e) {
+                    sender.sendMessage("Illegal UUID.");
+                    return true;
+                }
             }
 
             NameHistory result = null;
@@ -249,9 +254,18 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
             return true;
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("lookupUUIDs")) {
+            String name = args[1];
+            sender.sendMessage("UUIDs for: " + name);
+            for (UUID uuid : getCurrentAndPreviousPlayers(name)) {
+                sender.sendMessage("  " + uuid.toString());
+            }
+            return true;
+        }
         sender.sendMessage(label + " stats");
         sender.sendMessage(label + " lookup <player>");
-        sender.sendMessage(label + " lookupHistory <uuid>");
+        sender.sendMessage(label + " lookupHistory <player>");
+        sender.sendMessage(label + " lookupUUIDs <name>");
         return true;
     }
 
@@ -706,12 +720,16 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown) {
+        return getNameHistory(playerUUID, queryMojangIfUnknown, true);
+    }
+
+    private NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown, boolean allowOutdated) {
         nameHistoryLookups++;
         NameHistory result;
         synchronized (this) {
             result = nameHistories.get(playerUUID);
             if (result != null) {
-                if (config.getMemoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getMemoryCacheExpirationTime() > System.currentTimeMillis()) {
+                if (config.getNameHistoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getNameHistoryCacheExpirationTime() > System.currentTimeMillis()) {
                     return result;
                 }
             }
@@ -723,7 +741,9 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 result = database.getNameHistory(playerUUID);
                 if (result != null) {
                     updateHistory(false, result);
-                    return result;
+                    if ((allowOutdated && !queryMojangIfUnknown) || config.getNameHistoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getNameHistoryCacheExpirationTime() > System.currentTimeMillis()) {
+                        return result;
+                    }
                 }
             } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
@@ -739,7 +759,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback) {
-        final NameHistory history = getNameHistory(playerUUID);
+        final NameHistory history = getNameHistory(playerUUID, false, false);
         if (history != null) {
             if (synchronousCallback != null) {
                 if (Bukkit.isPrimaryThread()) {

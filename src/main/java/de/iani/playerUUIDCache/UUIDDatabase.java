@@ -10,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -46,6 +45,8 @@ public class UUIDDatabase {
     private boolean mayUseProfilesTable;
 
     private final String insertNameHistory;
+
+    private final String updateNameHistoryRefreshed;
 
     private final String insertNameChange;
 
@@ -89,15 +90,18 @@ public class UUIDDatabase {
 
         deleteOldPlayerProfiles = "DELETE FROM " + profilesTableName + " WHERE lastSeen < ?";
 
-        insertNameHistory = "INSERT IGNORE INTO " + nameHistoriesTableName + " (uuid, firstName) VALUES (?, ?)";
+        insertNameHistory = "INSERT INTO " + nameHistoriesTableName + " (uuid, firstName, refreshed) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE refreshed = ?";
+
+        updateNameHistoryRefreshed = "UPDATE " + nameHistoriesTableName + " SET refreshed = ? WHERE uuid = ?";
 
         insertNameChange = "INSERT IGNORE INTO " + nameChangesTableName + " (uuid, date, newName) VALUES (?, ?, ?)";
 
-        selectNameHistory = "SELECT firstName FROM " + nameHistoriesTableName + " WHERE uuid = ?";
+        selectNameHistory = "SELECT firstName, refreshed FROM " + nameHistoriesTableName + " WHERE uuid = ?";
 
         selectNameChanges = "SELECT date, newName FROM " + nameChangesTableName + " WHERE uuid = ?";
 
-        selectNameUsers = "(SELECT uuid FROM " + nameHistoriesTableName + " WHERE firstName = ?) UNION (SELECT uuid FROM " + nameChangesTableName + " WHERE newName = ?)";
+        selectNameUsers = "SELECT uuid, date FROM ((SELECT uuid, 0 AS date FROM " + nameHistoriesTableName + " WHERE firstName = ?) UNION (SELECT uuid, lastSeen AS date FROM " + tableName + " WHERE name = ?) UNION (SELECT uuid, date FROM " + nameChangesTableName
+                + " WHERE newName = ?)) AS t ORDER BY date DESC";
 
         this.connection.runCommands((connection, sqlConnection) -> {
             if (!sqlConnection.hasTable(nameHistoriesTableName)) {
@@ -105,7 +109,13 @@ public class UUIDDatabase {
                 smt.executeUpdate("CREATE TABLE `" + nameHistoriesTableName + "` ("//
                         + "`uuid` CHAR( 36 ) NOT NULL,"//
                         + "`firstName` VARCHAR( 16 ) NOT NULL,"//
+                        + "`refreshed` BIGINT NOT NULL DEFAULT '0',"//
                         + "PRIMARY KEY ( `uuid` ), INDEX ( `firstName` ) ) ENGINE = innodb");
+                smt.close();
+            }
+            if (!sqlConnection.hasColumn(nameHistoriesTableName, "refreshed")) {
+                Statement smt = connection.createStatement();
+                smt.executeUpdate("ALTER TABLE `" + nameHistoriesTableName + "` ADD `refreshed` BIGINT NOT NULL DEFAULT '0' AFTER firstName");
                 smt.close();
             }
             return null;
@@ -302,6 +312,8 @@ public class UUIDDatabase {
             PreparedStatement smt = sqlConnection.getOrCreateStatement(insertNameHistory);
             smt.setString(1, history.getUUID().toString());
             smt.setString(2, history.getFirstName());
+            smt.setLong(3, history.getCacheLoadTime());
+            smt.setLong(4, history.getCacheLoadTime());
             smt.executeUpdate();
 
             smt = sqlConnection.getOrCreateStatement(insertNameChange);
@@ -328,6 +340,7 @@ public class UUIDDatabase {
             }
 
             String firstName = rs.getString(1);
+            long refreshed = rs.getLong(2);
             rs.close();
 
             smt = sqlConnection.getOrCreateStatement(selectNameChanges);
@@ -340,7 +353,7 @@ public class UUIDDatabase {
             }
             rs.close();
 
-            return new NameHistory(uuid, firstName, changes, System.currentTimeMillis());
+            return new NameHistory(uuid, firstName, changes, refreshed);
         });
     }
 
@@ -349,9 +362,10 @@ public class UUIDDatabase {
             PreparedStatement smt = sqlConnection.getOrCreateStatement(selectNameUsers);
             smt.setString(1, name);
             smt.setString(2, name);
+            smt.setString(3, name);
             ResultSet rs = smt.executeQuery();
 
-            Set<UUID> result = new HashSet<>();
+            Set<UUID> result = new LinkedHashSet<>();
             while (rs.next()) {
                 result.add(UUID.fromString(rs.getString(1)));
             }
