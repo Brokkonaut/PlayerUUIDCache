@@ -173,7 +173,7 @@ public interface PlayerUUIDCacheAPI {
 
     /**
      * Searches for all known players whose names contain the given string. If a database is present, it will be used.
-     * If no database is present, or if the database query fails, the local cache will be used. If no lokal cache is
+     * If no database is present, or if the database query fails, the local cache will be used. If no local cache is
      * present, null will be returned. This will never query Mojang. The resulting list is ordered by when the players
      * were last seen on the server, with players seen more recently coming first.
      *
