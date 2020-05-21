@@ -556,12 +556,14 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         if (result == null && playersByUUID != null) {
             partialName = partialName.toLowerCase();
             result = new ArrayList<>();
-            for (CachedPlayer player : playersByUUID.values()) {
-                if (player.getName().toLowerCase().contains(partialName)) {
-                    result.add(player);
+            synchronized (this) {
+                for (CachedPlayer player : playersByUUID.values()) {
+                    if (player.getName().toLowerCase().contains(partialName)) {
+                        result.add(player);
+                    }
                 }
+                result.sort((p1, p2) -> -1 * Long.compare(p1.getLastSeen(), p2.getLastSeen()));
             }
-            result.sort((p1, p2) -> -1 * Long.compare(p1.getLastSeen(), p2.getLastSeen()));
         }
 
         return result;
