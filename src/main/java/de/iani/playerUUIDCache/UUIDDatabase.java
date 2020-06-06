@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,8 @@ public class UUIDDatabase {
     private final String selectPlayerByName;
 
     private final String searchPlayersByPartialName;
+
+    private final String selectAllPlayers;
 
     private final String insertPlayerProfile;
 
@@ -70,6 +73,8 @@ public class UUIDDatabase {
         selectPlayerByName = "SELECT uuid, name, lastSeen FROM " + tableName + " WHERE name = ?";
 
         searchPlayersByPartialName = "SELECT uuid, name, lastSeen FROM " + tableName + " WHERE name LIKE ? ORDER BY lastSeen DESC";
+
+        selectAllPlayers = "SELECT uuid, name, lastSeen FROM " + tableName;
 
         this.connection.runCommands((connection, sqlConnection) -> {
             if (!sqlConnection.hasTable(tableName)) {
@@ -222,6 +227,27 @@ public class UUIDDatabase {
             ResultSet rs = smt.executeQuery();
 
             List<CachedPlayer> result = new ArrayList<>();
+            while (rs.next()) {
+                try {
+                    UUID uuid = UUID.fromString(rs.getString(1));
+                    String name = rs.getString(2);
+                    long time = rs.getLong(3);
+                    result.add(new CachedPlayer(uuid, name, time, System.currentTimeMillis()));
+                } catch (IllegalArgumentException e) {
+                    // ignore invalid uuid
+                }
+            }
+            rs.close();
+            return result;
+        });
+    }
+
+    public Set<CachedPlayer> getAllPlayers() throws SQLException {
+        return this.connection.runCommands((connection, sqlConnection) -> {
+            PreparedStatement smt = sqlConnection.getOrCreateStatement(selectAllPlayers);
+            ResultSet rs = smt.executeQuery();
+
+            Set<CachedPlayer> result = new HashSet<>();
             while (rs.next()) {
                 try {
                     UUID uuid = UUID.fromString(rs.getString(1));

@@ -184,6 +184,11 @@ public interface PlayerUUIDCacheAPI {
     List<CachedPlayer> searchPlayersByPartialName(String partialName);
 
     /**
+     * Loads all players from the database into the local cache. If not database is present, this method has no effect.
+     */
+    void loadAllPlayersFromDatabase();
+
+    /**
      * Gets a NameHistory for a UUID.
      * The result may be null if this player's history is not found in the cache.
      *
