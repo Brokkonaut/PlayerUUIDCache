@@ -4,7 +4,10 @@ import java.util.Map;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Statistic;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 public final class CachedPlayer implements OfflinePlayer {
@@ -136,5 +139,95 @@ public final class CachedPlayer implements OfflinePlayer {
     @Override
     public Location getBedSpawnLocation() {
         return Bukkit.getOfflinePlayer(uuid).getBedSpawnLocation();
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic);
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic, int amount) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic, amount);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic, int amount) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic, amount);
+    }
+
+    @Override
+    public void setStatistic(Statistic statistic, int newValue) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).setStatistic(statistic, newValue);
+    }
+
+    @Override
+    public int getStatistic(Statistic statistic) throws IllegalArgumentException {
+        return Bukkit.getOfflinePlayer(uuid).getStatistic(statistic);
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic, Material material) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic, material);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic, Material material) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic, material);
+    }
+
+    @Override
+    public int getStatistic(Statistic statistic, Material material) throws IllegalArgumentException {
+        return Bukkit.getOfflinePlayer(uuid).getStatistic(statistic, material);
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic, Material material, int amount) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic, material, amount);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic, Material material, int amount) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic, material, amount);
+    }
+
+    @Override
+    public void setStatistic(Statistic statistic, Material material, int newValue) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).setStatistic(statistic, material, newValue);
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic, EntityType entityType) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic, entityType);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic, EntityType entityType) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic, entityType);
+    }
+
+    @Override
+    public int getStatistic(Statistic statistic, EntityType entityType) throws IllegalArgumentException {
+        return Bukkit.getOfflinePlayer(uuid).getStatistic(statistic, entityType);
+    }
+
+    @Override
+    public void incrementStatistic(Statistic statistic, EntityType entityType, int amount) throws IllegalArgumentException {
+        Bukkit.getOfflinePlayer(uuid).incrementStatistic(statistic, entityType, amount);
+    }
+
+    @Override
+    public void decrementStatistic(Statistic statistic, EntityType entityType, int amount) {
+        Bukkit.getOfflinePlayer(uuid).decrementStatistic(statistic, entityType, amount);
+    }
+
+    @Override
+    public void setStatistic(Statistic statistic, EntityType entityType, int newValue) {
+        Bukkit.getOfflinePlayer(uuid).setStatistic(statistic, entityType, newValue);
     }
 }
