@@ -237,9 +237,9 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
 
             NameHistory result = null;
-            result = getNameHistory(uuid, true);
+            result = getNameHistory(uuid);
             if (result == null) {
-                sender.sendMessage("Unknown Account");
+                sender.sendMessage("Für diesen Account ist keine Namenshistory verfügbar");
             } else {
                 sender.sendMessage("First name: " + result.getFirstName());
                 if (result.getNameChanges().isEmpty()) {

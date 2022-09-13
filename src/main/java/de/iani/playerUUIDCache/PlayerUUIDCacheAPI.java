@@ -245,7 +245,7 @@ public interface PlayerUUIDCacheAPI {
      */
     @Deprecated(forRemoval = true)
     default NameHistory getNameHistory(OfflinePlayer player, boolean queryMojangIfUnknown) {
-        return getNameHistory(player.getUniqueId(), queryMojangIfUnknown);
+        return getNameHistory(player.getUniqueId());
     }
 
     /**
