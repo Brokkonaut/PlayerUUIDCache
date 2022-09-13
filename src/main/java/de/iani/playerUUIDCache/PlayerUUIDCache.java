@@ -2,7 +2,6 @@ package de.iani.playerUUIDCache;
 
 import de.iani.playerUUIDCache.NameHistory.NameChange;
 import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
-import de.iani.playerUUIDCache.util.fetcher.NameHistoryFetcher;
 import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
 import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
 import java.io.IOException;
@@ -20,6 +19,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
@@ -277,10 +277,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             long now = System.currentTimeMillis();
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
 
-            NameHistory oldHistory = getNameHistory(e.getPlayer());
-            if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
-                PlayerUUIDCache.this.loadNameHistoryAsynchronously(e.getPlayer().getUniqueId());
-            }
+            getNameHistory(e.getPlayer());
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
@@ -289,11 +286,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             UUID uuid = e.getPlayer().getUniqueId();
             long now = System.currentTimeMillis();
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
-
-            NameHistory oldHistory = getNameHistory(e.getPlayer());
-            if (oldHistory == null || (!e.getPlayer().getName().equals(oldHistory.getName(System.currentTimeMillis())))) {
-                PlayerUUIDCache.this.loadNameHistoryAsynchronously(e.getPlayer().getUniqueId());
-            }
         }
     }
 
@@ -729,23 +721,48 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     @Override
-    public NameHistory getNameHistory(UUID playerUUID) {
-        return getNameHistory(playerUUID, false);
+    public NameHistory getNameHistory(OfflinePlayer player) {
+        NameHistory history = getNameHistory(player.getUniqueId());
+        String currentName = player.getName();
+        if (currentName != null) {
+            long time = System.currentTimeMillis();
+            if (history == null) {
+                history = new NameHistory(player.getUniqueId(), currentName, List.of(), time);
+                updateHistory(true, history);
+            } else if (!currentName.equals(history.getName(time))) {
+                history = getNameHistoryInternal(player.getUniqueId(), true); // force reload from database to avoid outdated cache
+                if (!currentName.equals(history.getName(time))) {
+                    ArrayList<NameChange> nameChanges = new ArrayList<>(history.getNameChanges());
+                    nameChanges.add(new NameChange(currentName, time));
+                    history = new NameHistory(history.getUUID(), history.getFirstName(), nameChanges, time);
+                    updateHistory(true, history);
+                }
+            }
+        }
+        return history;
+    }
+
+    @Deprecated
+    @Override
+    public NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown) {
+        return getNameHistory(playerUUID);
     }
 
     @Override
-    public NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown) {
-        return getNameHistory(playerUUID, queryMojangIfUnknown, true);
+    public NameHistory getNameHistory(UUID playerUUID) {
+        return getNameHistoryInternal(playerUUID, false);
     }
 
-    private NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown, boolean allowOutdated) {
+    private NameHistory getNameHistoryInternal(UUID playerUUID, boolean skipCache) {
         nameHistoryLookups++;
         NameHistory result;
-        synchronized (this) {
-            result = nameHistories.get(playerUUID);
-            if (result != null) {
-                if (config.getNameHistoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getNameHistoryCacheExpirationTime() > System.currentTimeMillis()) {
-                    return result;
+        if (!skipCache) {
+            synchronized (this) {
+                result = nameHistories.get(playerUUID);
+                if (result != null) {
+                    if (config.getNameHistoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getNameHistoryCacheExpirationTime() > System.currentTimeMillis()) {
+                        return result;
+                    }
                 }
             }
         }
@@ -756,25 +773,20 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 result = database.getNameHistory(playerUUID);
                 if (result != null) {
                     updateHistory(false, result);
-                    if ((allowOutdated && !queryMojangIfUnknown) || config.getNameHistoryCacheExpirationTime() == -1 || result.getCacheLoadTime() + config.getNameHistoryCacheExpirationTime() > System.currentTimeMillis()) {
-                        return result;
-                    }
+                    return result;
                 }
             } catch (SQLException e) {
                 getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
             }
         }
 
-        if (!queryMojangIfUnknown) {
-            return null;
-        }
-
-        return getNameHistoryFromMojang(playerUUID);
+        return null;
     }
 
+    @Deprecated
     @Override
     public void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback) {
-        final NameHistory history = getNameHistory(playerUUID, false, false);
+        final NameHistory history = getNameHistory(playerUUID);
         if (history != null) {
             if (synchronousCallback != null) {
                 if (Bukkit.isPrimaryThread()) {
@@ -785,19 +797,12 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
-            final NameHistory h = getNameHistoryFromMojang(playerUUID);
-            if (synchronousCallback != null) {
-                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(h));
-            }
-        });
     }
 
+    @Deprecated
     @Override
     public Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID) {
-        FutureTask<NameHistory> futuretask = new FutureTask<>(() -> getNameHistoryFromMojang(playerUUID));
-        getServer().getScheduler().runTaskAsynchronously(this, futuretask);
-        return futuretask;
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -834,25 +839,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
 
         return result;
-    }
-
-    protected NameHistory getNameHistoryFromMojang(UUID playerUUID) {
-        mojangQueries++;
-        try {
-            NameHistory result = new NameHistoryFetcher(playerUUID).call();
-            if (result == null) {
-                return null;
-            }
-            if (getServer().isPrimaryThread()) {
-                updateHistory(true, result);
-            } else {
-                getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> updateHistory(true, result));
-            }
-            return result;
-        } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while trying to load name history", e);
-        }
-        return null;
     }
 
     protected synchronized void updateHistory(boolean updateDB, NameHistory history) {

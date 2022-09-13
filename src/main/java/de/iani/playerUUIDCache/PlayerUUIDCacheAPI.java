@@ -213,23 +213,25 @@ public interface PlayerUUIDCacheAPI {
 
     /**
      * Gets a NameHistory for a UUID.
-     * If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
-     * query is blocking, so avoid calling it in the main thread if possible.
+     * <s>If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
+     * query is blocking, so avoid calling it in the main thread if possible.</s>
      * The result may be null if this player's history is not found in the cache.
      * This method can be called from any thread.
      *
      * @param playerUUID
      *            the UUID of the player
      * @param queryMojangIfUnknown
-     *            query Mojang if this parameter is true and no entry is found in the cache
+     *            <s>query Mojang if this parameter is true and no entry is found in the cache</s>
      * @return the NameHistory or null
+     * @deprecated Mojang has removed the required API
      */
+    @Deprecated(forRemoval = true)
     NameHistory getNameHistory(UUID playerUUID, boolean queryMojangIfUnknown);
 
     /**
      * Gets a NameHistory for a player.
-     * If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
-     * query is blocking, so avoid calling it in the main thread if possible.
+     * <s>If no entry is found in the cache this method will query Mojang if queryMojangIfUnknown is true. This
+     * query is blocking, so avoid calling it in the main thread if possible.</s>
      * The result may be null if this player's history is not found in the cache.
      * This method can be called from any thread.
      * The OfflinePlayer must return a UUID.
@@ -237,17 +239,19 @@ public interface PlayerUUIDCacheAPI {
      * @param player
      *            the player
      * @param queryMojangIfUnknown
-     *            query Mojang if this parameter is true and no entry is found in the cache
+     *            <s>query Mojang if this parameter is true and no entry is found in the cache</s>
      * @return the NameHistory or null
+     * @deprecated Mojang has removed the required API
      */
+    @Deprecated(forRemoval = true)
     default NameHistory getNameHistory(OfflinePlayer player, boolean queryMojangIfUnknown) {
         return getNameHistory(player.getUniqueId(), queryMojangIfUnknown);
     }
 
     /**
      * Gets a NameHistory for a UUID asyncronously.
-     * If no entry is found in the cache this method will query Mojang. When the result is available,
-     * the callback is executed in the main thread. This query is not blocking the main thread.
+     * <s>If no entry is found in the cache this method will query Mojang.</s> When the result is available,
+     * the callback is executed in the main thread. <s>This query is not blocking the main thread.</s>
      * The callback will be called with null, if this player is not found.
      * This method can be called from any thread.
      *
@@ -256,30 +260,34 @@ public interface PlayerUUIDCacheAPI {
      * @param synchronousCallback
      *            a callback to execute when the result of the query to Mojang is completed
      * @return the NameHistory or null
+     * @deprecated Mojang has removed the required API
      */
+    @Deprecated(forRemoval = true)
     void getNameHistoryAsynchronously(UUID playerUUID, Callback<NameHistory> synchronousCallback);
 
     /**
-     * Gets a NameHistory for a UUID from Mojang.
+     * <s>Gets a NameHistory for a UUID from Mojang.
      * This method will not query the cache but will always send a request to Mojang. If possible,
      * you should call Future.get() in a seperate thread to avoid blocking the main thread.
-     * This method can be called from any thread.
+     * This method can be called from any thread.</s>
      *
-     * The Future will return null, if this player is not found.
+     * The Future will return null<s>, if this player is not found</s>.
      *
      * @param playerUUID
      *            the UUID of the player
      * @return a Future to query the result
+     * @deprecated Mojang has removed the required API
      */
+    @Deprecated(forRemoval = true)
     Future<NameHistory> loadNameHistoryAsynchronously(UUID playerUUID);
 
     /**
      * Returns the UUIDs of all player known to have used the given name in the past or present.
      * This method will never query mojang. If no players are found, an empty set is returned.
-     * 
+     *
      * This method will usually query the database. If no database is present, it will iterate
      * over the entire memory cache. Expect according performance.
-     * 
+     *
      * @param name
      *            the name to search for
      * @return a set of all known players associated with that name
