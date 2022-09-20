@@ -21,7 +21,7 @@ public class NameHistory {
 
         /**
          * Returns the name the player adopted with this change.
-         * 
+         *
          * @return new name
          */
         public String getNewName() {
@@ -30,7 +30,7 @@ public class NameHistory {
 
         /**
          * Returns the date at which this change was performed, as a unix epoch timestamp in ms.
-         * 
+         *
          * @return date of the change
          */
         public long getDate() {
@@ -77,15 +77,16 @@ public class NameHistory {
 
         this.uuid = uuid;
         this.firstName = firstName;
+        changes = new ArrayList<>(changes);
         changes.sort(null);
-        this.changes = Collections.unmodifiableList(new ArrayList<>(changes));
+        this.changes = Collections.unmodifiableList(changes);
 
         this.cacheLoadTime = cacheLoadTime;
     }
 
     /**
      * Returns the uuid of the player with this history.
-     * 
+     *
      * @return player's uuid
      */
     public UUID getUUID() {
@@ -94,7 +95,7 @@ public class NameHistory {
 
     /**
      * Returns the first name the player with this history ever had.
-     * 
+     *
      * @return first name of the player
      */
     public String getFirstName() {
@@ -103,7 +104,7 @@ public class NameHistory {
 
     /**
      * Returns a list of all name changes the player with this history had, in chronological order.
-     * 
+     *
      * @return list of name changes
      */
     public List<NameChange> getNameChanges() {
@@ -112,12 +113,12 @@ public class NameHistory {
 
     /**
      * Returns the name the player with this history had at the given date.
-     * 
+     *
      * Note that if this history doesn't contain any changes or if the given date lies before the
      * first change, the players first name is returned (even if the account didn't exist then). For
      * all dates lying in the future, the current name is returned. If the given date matches that
      * of one change exactly, that changes new name is returned.
-     * 
+     *
      * @param date
      *            a date as unix epoch timestamp in ms
      * @return the name the player with this history had at the given date
@@ -132,12 +133,12 @@ public class NameHistory {
 
     /**
      * Returns the name the player with this history had at the given date.
-     * 
+     *
      * Note that if this history doesn't contain any changes or if the given date lies before the
      * first change, the players first name is returned (even if the account didn't exist then). For
      * all dates lying in the future, the current name is returned. If the given date matches that
      * of one change exactly, that changes new name is returned.
-     * 
+     *
      * @param date
      *            a date
      * @return the name the player with this history had at the given date
