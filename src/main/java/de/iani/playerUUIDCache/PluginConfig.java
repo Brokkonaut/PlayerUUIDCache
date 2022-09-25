@@ -13,7 +13,7 @@ public class PluginConfig {
 
     public PluginConfig(PlayerUUIDCache plugin) {
         FileConfiguration config = plugin.getConfig();
-        if (!config.contains("nameHistoryCacheExpirationTime", true)) {
+        if (config.get("nameHistoryCacheExpirationTime", null) == null) {
             config.set("nameHistoryCacheExpirationTime", 1000L * 60 * 60 * 24 * 30);
             plugin.saveConfig();
         }
