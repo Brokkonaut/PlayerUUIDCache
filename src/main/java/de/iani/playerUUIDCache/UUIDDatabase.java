@@ -379,7 +379,7 @@ public class UUIDDatabase {
             }
             rs.close();
 
-            return new NameHistory(uuid, firstName, changes, refreshed);
+            return new NameHistory(uuid, firstName, changes, System.currentTimeMillis());
         });
     }
 
