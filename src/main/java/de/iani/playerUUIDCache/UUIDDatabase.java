@@ -327,7 +327,7 @@ public class UUIDDatabase {
     public void deleteOldPlayerProfiles() throws SQLException {
         this.connection.runCommands((connection, sqlConnection) -> {
             PreparedStatement smt = sqlConnection.getOrCreateStatement(deleteOldPlayerProfiles);
-            smt.setLong(1, System.currentTimeMillis() - PlayerUUIDCache.PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME);
+            smt.setLong(1, System.currentTimeMillis() - PlayerUUIDCache.PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME * 2);
             smt.executeUpdate();
             return null;
         });

@@ -650,7 +650,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 CachedPlayerProfile entry = playerProfiles.get(playerUUID);
                 if (entry != null) {
                     long now = System.currentTimeMillis();
-                    if (entry.getCacheLoadTime() + PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME > now && entry.getLastSeen() + PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME > now) {
+                    if (entry.getCacheLoadTime() + PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME > now && entry.getExpiration() > now) {
                         return entry;
                     } else {
                         playerProfiles.remove(playerUUID);
@@ -662,7 +662,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             try {
                 profilePropertiesLookupQueries++;
                 CachedPlayerProfile entry = database.getPlayerProfile(playerUUID);
-                if (entry != null && entry.getLastSeen() + PROFILE_PROPERTIES_CACHE_EXPIRATION_TIME > System.currentTimeMillis()) {
+                if (entry != null && entry.getExpiration() > System.currentTimeMillis()) {
                     updateProfileProperties(false, entry);
                     return entry;
                 }
