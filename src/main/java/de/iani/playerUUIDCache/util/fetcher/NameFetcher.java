@@ -17,8 +17,6 @@ import java.util.concurrent.Callable;
 public class NameFetcher implements Callable<Map<UUID, String>> {
     private static final String PROFILE_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";
 
-    private final JsonParser jsonParser = new JsonParser();
-
     private final ArrayList<UUID> uuids;
 
     public NameFetcher(List<UUID> uuids) {
@@ -35,7 +33,7 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
             if (is == null) {
                 continue;
             }
-            JsonElement response = jsonParser.parse(new InputStreamReader(is));
+            JsonElement response = JsonParser.parseReader(new InputStreamReader(is));
             if (response.isJsonNull()) {
                 continue;
             }

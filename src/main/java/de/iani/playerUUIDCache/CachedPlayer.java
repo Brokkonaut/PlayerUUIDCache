@@ -1,7 +1,12 @@
 package de.iani.playerUUIDCache;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import org.bukkit.BanEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -137,6 +142,7 @@ public final class CachedPlayer implements OfflinePlayer {
     }
 
     @Override
+    @Deprecated
     public Location getBedSpawnLocation() {
         return Bukkit.getOfflinePlayer(uuid).getBedSpawnLocation();
     }
@@ -229,5 +235,45 @@ public final class CachedPlayer implements OfflinePlayer {
     @Override
     public void setStatistic(Statistic statistic, EntityType entityType, int newValue) {
         Bukkit.getOfflinePlayer(uuid).setStatistic(statistic, entityType, newValue);
+    }
+
+    @Override
+    public boolean isConnected() {
+        return false;
+    }
+
+    @Override
+    public PlayerProfile getPlayerProfile() {
+        return Bukkit.createProfile(uuid, name);
+    }
+
+    @Override
+    public <E extends BanEntry<? super PlayerProfile>> E ban(String reason, Date expires, String source) {
+        return null;
+    }
+
+    @Override
+    public <E extends BanEntry<? super PlayerProfile>> E ban(String reason, Instant expires, String source) {
+        return null;
+    }
+
+    @Override
+    public <E extends BanEntry<? super PlayerProfile>> E ban(String reason, Duration duration, String source) {
+        return null;
+    }
+
+    @Override
+    public Location getRespawnLocation() {
+        return null;
+    }
+
+    @Override
+    public Location getLastDeathLocation() {
+        return null;
+    }
+
+    @Override
+    public Location getLocation() {
+        return null;
     }
 }

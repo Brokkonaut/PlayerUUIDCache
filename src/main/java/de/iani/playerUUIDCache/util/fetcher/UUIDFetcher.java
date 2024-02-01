@@ -28,8 +28,6 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
 
     private static final String PROFILE_URL = "https://api.mojang.com/profiles/minecraft";
 
-    private final JsonParser jsonParser = new JsonParser();
-
     private final ArrayList<String> names;
 
     private final boolean rateLimiting;
@@ -67,7 +65,7 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
             if (is == null) {
                 continue;
             }
-            JsonElement response = jsonParser.parse(new InputStreamReader(is));
+            JsonElement response = JsonParser.parseReader(new InputStreamReader(is));
             if (response.isJsonNull()) {
                 continue;
             }

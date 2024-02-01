@@ -49,7 +49,7 @@ public class UUIDDatabase {
 
     private final String insertNameHistory;
 
-    private final String updateNameHistoryRefreshed;
+    // private final String updateNameHistoryRefreshed;
 
     private final String insertNameChange;
 
@@ -97,7 +97,7 @@ public class UUIDDatabase {
 
         insertNameHistory = "INSERT INTO " + nameHistoriesTableName + " (uuid, firstName, refreshed) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE refreshed = ?";
 
-        updateNameHistoryRefreshed = "UPDATE " + nameHistoriesTableName + " SET refreshed = ? WHERE uuid = ?";
+        // updateNameHistoryRefreshed = "UPDATE " + nameHistoriesTableName + " SET refreshed = ? WHERE uuid = ?";
 
         insertNameChange = "INSERT IGNORE INTO " + nameChangesTableName + " (uuid, date, newName) VALUES (?, ?, ?)";
 
@@ -366,7 +366,7 @@ public class UUIDDatabase {
             }
 
             String firstName = rs.getString(1);
-            long refreshed = rs.getLong(2);
+            // long refreshed = rs.getLong(2);
             rs.close();
 
             smt = sqlConnection.getOrCreateStatement(selectNameChanges);

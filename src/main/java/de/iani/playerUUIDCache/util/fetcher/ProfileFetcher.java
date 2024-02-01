@@ -19,8 +19,6 @@ public class ProfileFetcher implements Callable<CachedPlayerProfile> {
     private static final String PROFILE_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";
     private static final String PROFILE_URL2 = "?unsigned=false";
 
-    private final JsonParser jsonParser = new JsonParser();
-
     private final UUID uuid;
 
     public ProfileFetcher(UUID uuid) {
@@ -37,7 +35,7 @@ public class ProfileFetcher implements Callable<CachedPlayerProfile> {
         if (is == null) {
             return null;
         }
-        JsonElement response = jsonParser.parse(new InputStreamReader(is));
+        JsonElement response = JsonParser.parseReader(new InputStreamReader(is));
         if (response.isJsonNull()) {
             return null;
         }
