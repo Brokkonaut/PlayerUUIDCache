@@ -576,7 +576,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
     }
 
-    protected synchronized void updateEntries(boolean updateDB, CachedPlayer... entries) {
+    public synchronized void updateEntries(boolean updateDB, CachedPlayer... entries) {
         if (entries == null || entries.length == 0) {
             return;
         }
