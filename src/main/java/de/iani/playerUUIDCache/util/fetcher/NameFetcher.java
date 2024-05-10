@@ -6,7 +6,7 @@ import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +27,7 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
     public Map<UUID, String> call() throws Exception {
         Map<UUID, String> uuidStringMap = new HashMap<>();
         for (UUID uuid : uuids) {
-            HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL + uuid.toString().replace("-", "")).openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URI(PROFILE_URL + uuid.toString().replace("-", "")).toURL().openConnection();
             connection.setConnectTimeout(5000);
             InputStream is = connection.getInputStream();
             if (is == null) {

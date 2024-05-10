@@ -9,7 +9,7 @@ import de.iani.playerUUIDCache.CachedPlayerProfile;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.UUID;
@@ -29,7 +29,7 @@ public class ProfileFetcher implements Callable<CachedPlayerProfile> {
     public CachedPlayerProfile call() throws Exception {
         String id = uuid.toString().replace("-", "");
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(PROFILE_URL + id + PROFILE_URL2).openConnection();
+        HttpURLConnection connection = (HttpURLConnection) new URI(PROFILE_URL + id + PROFILE_URL2).toURL().openConnection();
         connection.setConnectTimeout(5000);
         InputStream is = connection.getInputStream();
         if (is == null) {
