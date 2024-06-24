@@ -356,7 +356,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                     rv.add(entry);
                 }
             } catch (Exception e) {
-                getLogger().log(Level.SEVERE, "Error while trying to load players", e);
+                getLogger().log(Level.SEVERE, "Error while trying to load players: " + loadNames, e);
             }
         }
         return rv;
@@ -508,7 +508,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 }
             }
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while trying to load player", e);
+            getLogger().log(Level.SEVERE, "Error while trying to load player: " + playerName, e);
         }
         return null;
     }
@@ -529,7 +529,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
                 }
             }
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while trying to load player", e);
+            getLogger().log(Level.SEVERE, "Error while trying to load player name: " + playerUUID, e);
         }
         return null;
     }
@@ -716,7 +716,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
             return entry;
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Error while trying to load player", e);
+            getLogger().log(Level.SEVERE, "Error while trying to load player profile: " + playerUUID, e);
         }
         return null;
     }
