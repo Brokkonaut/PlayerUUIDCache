@@ -278,7 +278,9 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             updateEntries(true, new CachedPlayer(uuid, name, now, now));
 
             getNameHistory(e.getPlayer());
-            playerProfiles.remove(e.getPlayer().getUniqueId());
+            if (playerProfiles != null) {
+                playerProfiles.remove(e.getPlayer().getUniqueId());
+            }
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
