@@ -3,6 +3,7 @@ package de.iani.playerUUIDCache.util.fetcher;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -29,7 +30,15 @@ public class NameFetcher implements Callable<Map<UUID, String>> {
         for (UUID uuid : uuids) {
             HttpURLConnection connection = (HttpURLConnection) new URI(PROFILE_URL + uuid.toString().replace("-", "")).toURL().openConnection();
             connection.setConnectTimeout(5000);
-            InputStream is = connection.getInputStream();
+            InputStream is = null;
+            try {
+                is = connection.getInputStream();
+            } catch (IOException e) {
+                if (e.getMessage().startsWith("Server returned HTTP response code: 403")) {
+                    return null; // user not found
+                }
+                throw e;
+            }
             if (is == null) {
                 continue;
             }

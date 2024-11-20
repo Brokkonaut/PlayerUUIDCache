@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -62,7 +63,15 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
             HttpURLConnection connection = createConnection();
             String body = JSONArray.toJSONString(names.subList(i * PROFILES_PER_REQUEST, Math.min((i + 1) * PROFILES_PER_REQUEST, names.size())));
             writeBody(connection, body);
-            InputStream is = connection.getInputStream();
+            InputStream is = null;
+            try {
+                is = connection.getInputStream();
+            } catch (IOException e) {
+                if (e.getMessage().startsWith("Server returned HTTP response code: 403")) {
+                    continue; // user not found
+                }
+                throw e;
+            }
             if (is == null) {
                 continue;
             }
