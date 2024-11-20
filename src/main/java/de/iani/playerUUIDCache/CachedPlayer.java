@@ -1,6 +1,7 @@
 package de.iani.playerUUIDCache;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
+import io.papermc.paper.persistence.PersistentDataContainerView;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.time.Instant;
@@ -15,6 +16,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 public final class CachedPlayer implements OfflinePlayer {
     private final UUID uuid;
@@ -288,5 +290,10 @@ public final class CachedPlayer implements OfflinePlayer {
     @Override
     public Location getLocation() {
         return getOfflinePlayer().getLocation();
+    }
+
+    @Override
+    public @NotNull PersistentDataContainerView getPersistentDataContainer() {
+        return getOfflinePlayer().getPersistentDataContainer();
     }
 }
