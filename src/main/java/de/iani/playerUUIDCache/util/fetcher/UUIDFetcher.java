@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
-import org.json.simple.JSONArray;
 
 /**
  * From https://gist.github.com/evilmidget38/26d70114b834f71fb3b4
@@ -26,7 +25,7 @@ import org.json.simple.JSONArray;
 public class UUIDFetcher implements Callable<Map<String, UUID>> {
     private static final Pattern NAME_PATTERN = Pattern.compile("([A-Za-z0-9_]){2,16}");
 
-    private static final int PROFILES_PER_REQUEST = 100;
+    private static final int PROFILES_PER_REQUEST = 10;
 
     private static final String PROFILE_URL = "https://api.mojang.com/profiles/minecraft";
 
@@ -61,8 +60,11 @@ public class UUIDFetcher implements Callable<Map<String, UUID>> {
         int requests = (names.size() + PROFILES_PER_REQUEST - 1) / PROFILES_PER_REQUEST;
         for (int i = 0; i < requests; i++) {
             HttpURLConnection connection = createConnection();
-            String body = JSONArray.toJSONString(names.subList(i * PROFILES_PER_REQUEST, Math.min((i + 1) * PROFILES_PER_REQUEST, names.size())));
-            writeBody(connection, body);
+            JsonArray requestNames = new JsonArray();
+            for (String s : names.subList(i * PROFILES_PER_REQUEST, Math.min((i + 1) * PROFILES_PER_REQUEST, names.size()))) {
+                requestNames.add(s);
+            }
+            writeBody(connection, requestNames.toString());
             InputStream is = null;
             try {
                 is = connection.getInputStream();
