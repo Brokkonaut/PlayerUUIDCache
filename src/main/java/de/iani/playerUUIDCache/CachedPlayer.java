@@ -17,6 +17,7 @@ import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 public final class CachedPlayer implements OfflinePlayer {
     private final UUID uuid;
@@ -280,6 +281,11 @@ public final class CachedPlayer implements OfflinePlayer {
     @Override
     public Location getRespawnLocation() {
         return getOfflinePlayer().getRespawnLocation();
+    }
+
+    @Override
+    public @Nullable Location getRespawnLocation(boolean loadLocationAndValidate) {
+        return getOfflinePlayer().getRespawnLocation(loadLocationAndValidate);
     }
 
     @Override
