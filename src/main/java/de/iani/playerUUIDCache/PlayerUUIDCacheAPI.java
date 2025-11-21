@@ -1,5 +1,6 @@
 package de.iani.playerUUIDCache;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -197,6 +198,19 @@ public interface PlayerUUIDCacheAPI {
      * @return the NameHistory or null
      */
     NameHistory getNameHistory(UUID playerUUID);
+
+    /**
+     * Gets a NameHistory for a player.
+     * The result may be null if this player's history is not found in the cache.
+     * The PlayerProfile must return a UUID.
+     *
+     * @param player
+     *            the player
+     * @return the NameHistory or null
+     */
+    default NameHistory getNameHistory(PlayerProfile player) {
+        return getNameHistory(player.getId());
+    }
 
     /**
      * Gets a NameHistory for a player.

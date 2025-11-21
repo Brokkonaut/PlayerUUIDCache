@@ -1,9 +1,12 @@
 package de.iani.playerUUIDCache;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import de.iani.playerUUIDCache.NameHistory.NameChange;
 import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
 import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
 import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
+import io.papermc.paper.connection.PlayerLoginConnection;
+import io.papermc.paper.event.connection.PlayerConnectionValidateLoginEvent;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -30,7 +33,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -271,15 +273,19 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     private class PlayerLoginListener implements Listener {
         @EventHandler(priority = EventPriority.LOWEST)
-        public void onPlayerLogin(PlayerLoginEvent e) {
-            String name = e.getPlayer().getName();
-            UUID uuid = e.getPlayer().getUniqueId();
-            long now = System.currentTimeMillis();
-            updateEntries(true, new CachedPlayer(uuid, name, now, now));
+        public void onPlayerConnectionValidateLogin(PlayerConnectionValidateLoginEvent e) {
+            if (e.getConnection() instanceof PlayerLoginConnection connection) {
+                PlayerProfile profile = connection.getAuthenticatedProfile();
 
-            getNameHistory(e.getPlayer());
-            if (playerProfiles != null) {
-                playerProfiles.remove(e.getPlayer().getUniqueId());
+                String name = profile.getName();
+                UUID uuid = profile.getId();
+                long now = System.currentTimeMillis();
+                updateEntries(true, new CachedPlayer(uuid, name, now, now));
+
+                getNameHistory(profile);
+                if (playerProfiles != null) {
+                    playerProfiles.remove(uuid);
+                }
             }
         }
 
@@ -725,15 +731,30 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public NameHistory getNameHistory(OfflinePlayer player) {
-        NameHistory history = getNameHistory(player.getUniqueId());
+        UUID id = player.getUniqueId();
         String currentName = player.getName();
+        return getNameHistoryAndMaybeUpdateInternal(id, currentName);
+    }
+
+    @Override
+    public NameHistory getNameHistory(PlayerProfile player) {
+        UUID id = player.getId();
+        String currentName = player.getName();
+        return getNameHistoryAndMaybeUpdateInternal(id, currentName);
+    }
+
+    private NameHistory getNameHistoryAndMaybeUpdateInternal(final UUID id, String currentName) {
+        if (id == null) {
+            return null;
+        }
+        NameHistory history = getNameHistory(id);
         if (currentName != null) {
             long time = System.currentTimeMillis();
             if (history == null) {
-                history = new NameHistory(player.getUniqueId(), currentName, List.of(), time);
+                history = new NameHistory(id, currentName, List.of(), time);
                 updateHistory(true, history);
             } else if (!currentName.equals(history.getName(time))) {
-                history = getNameHistoryInternal(player.getUniqueId(), true); // force reload from database to avoid outdated cache
+                history = getNameHistoryInternal(id, true); // force reload from database to avoid outdated cache
                 if (!currentName.equals(history.getName(time))) {
                     ArrayList<NameChange> nameChanges = new ArrayList<>(history.getNameChanges());
                     nameChanges.add(new NameChange(currentName, time));
