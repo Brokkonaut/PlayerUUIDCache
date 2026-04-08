@@ -1,4 +1,4 @@
-PlayerUUDCache
+PlayerUUIDCache
 ==========
 
 This plugin provides an API to quickly resolve player names to UUIDs and vice versa. It uses an in memory cache as first level and a second level file or MySQL cache. For entries not found in the cache Mojang can be queried. All querys can be done asynchronously to avoid a negative performance impact.
