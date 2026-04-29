@@ -5,6 +5,17 @@ This plugin provides an API to quickly resolve player names to UUIDs and vice ve
 
 If you have a network of multiple servers you can use the same MySQL database for all instances so cached results are shared.
 
+Modules
+==========
+
+The project is split into three Maven modules:
+
+* `PlayerUUIDCacheCore` contains the server independent cache, storage, SQL and Mojang lookup logic.
+* `PlayerUUIDCache` is the Bukkit/Paper plugin and keeps the historical `de.iani.cubeside:PlayerUUIDCache` artifact for binary compatibility with existing Bukkit plugins.
+* `PlayerUUIDCacheBungeeCord` is the BungeeCord plugin. Other BungeeCord plugins can access the core API through `PlayerUUIDCacheBungeeCord.getInstance().getAPI()`.
+
+The core module is shaded into both server plugin jars, so no separate core jar has to be installed on a server.
+
 Development Builds
 ==========
 You can download development builds [from our Jenkins server](https://www.iani.de/jenkins/job/PlayerUUIDCache/).

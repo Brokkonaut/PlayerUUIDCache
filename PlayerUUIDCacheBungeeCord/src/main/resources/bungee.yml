@@ -1,0 +1,4 @@
+name: PlayerUUIDCacheBungeeCord
+main: de.iani.playerUUIDCache.bungeecord.PlayerUUIDCacheBungeeCord
+version: ${project.version}-${build.number}
+author: Brokkonaut
