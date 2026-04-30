@@ -1,6 +1,7 @@
 package de.iani.playerUUIDCache;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
+import de.iani.playerUUIDCache.core.CachedPlayerData;
 import io.papermc.paper.persistence.PersistentDataContainerView;
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -19,78 +20,32 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
-public final class CachedPlayer implements OfflinePlayer {
-    private final UUID uuid;
-
-    private final String name;
-
-    private final long lastSeen;
-
-    private final long cacheLoadTime;
-
+public final class CachedPlayer extends CachedPlayerData implements OfflinePlayer {
     private WeakReference<OfflinePlayer> bukkitPlayer;
 
     public CachedPlayer(UUID uuid, String name, long lastSeen, long cacheLoadTime) {
-        com.google.common.base.Preconditions.checkNotNull(uuid);
-        com.google.common.base.Preconditions.checkNotNull(name);
-        this.uuid = uuid;
-        this.name = name;
-        this.lastSeen = lastSeen;
-        this.cacheLoadTime = cacheLoadTime;
-    }
-
-    /**
-     * Gets the UUID of the cached player. This is never null.
-     *
-     * @return the UUID of the player
-     */
-    public UUID getUUID() {
-        return uuid;
-    }
-
-    /**
-     * Gets the name of the cached player. This is never null, but the name might be outdated.
-     *
-     * @return the name of the player
-     */
-    @Override
-    public String getName() {
-        return name;
-    }
-
-    @Override
-    public long getLastSeen() {
-        return lastSeen;
-    }
-
-    @Override
-    public long getLastLogin() {
-        return lastSeen;
-    }
-
-    long getCacheLoadTime() {
-        return cacheLoadTime;
+        super(uuid, name, lastSeen, cacheLoadTime);
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode() + uuid.hashCode() + (int) lastSeen;
+        return getName().hashCode() + getUUID().hashCode() + (int) getLastSeen();
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj.getClass() != CachedPlayer.class) {
+        if (obj == null || obj.getClass() != CachedPlayer.class) {
             return false;
         }
         CachedPlayer other = (CachedPlayer) obj;
-        return name.equalsIgnoreCase(other.name) && uuid.equals(other.uuid) && lastSeen == other.lastSeen;
+        return getName().equalsIgnoreCase(other.getName()) && getUUID().equals(other.getUUID()) && getLastSeen() == other.getLastSeen();
     }
 
     private OfflinePlayer getOfflinePlayer() {
         WeakReference<OfflinePlayer> loaded = bukkitPlayer;
         OfflinePlayer p = loaded == null ? null : loaded.get();
         if (p == null) {
-            p = Bukkit.getOfflinePlayer(uuid);
+            p = Bukkit.getOfflinePlayer(getUUID());
             bukkitPlayer = new WeakReference<>(p);
         }
         return p;
@@ -118,7 +73,7 @@ public final class CachedPlayer implements OfflinePlayer {
 
     @Override
     public UUID getUniqueId() {
-        return uuid;
+        return getUUID();
     }
 
     @Override
@@ -138,7 +93,7 @@ public final class CachedPlayer implements OfflinePlayer {
 
     @Override
     public Player getPlayer() {
-        return Bukkit.getPlayer(uuid);
+        return Bukkit.getPlayer(getUUID());
     }
 
     @Override
@@ -260,7 +215,7 @@ public final class CachedPlayer implements OfflinePlayer {
 
     @Override
     public PlayerProfile getPlayerProfile() {
-        return Bukkit.createProfile(uuid, name);
+        return Bukkit.createProfile(getUUID(), getName());
     }
 
     @Override

@@ -3,7 +3,7 @@ package de.iani.playerUUIDCache.core;
 import java.util.Objects;
 import java.util.UUID;
 
-public final class CachedPlayerData {
+public class CachedPlayerData {
     private final UUID uuid;
     private final String name;
     private final long lastSeen;

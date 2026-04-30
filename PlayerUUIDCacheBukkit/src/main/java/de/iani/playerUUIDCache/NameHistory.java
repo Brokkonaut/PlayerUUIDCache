@@ -1,21 +1,20 @@
 package de.iani.playerUUIDCache;
 
+import de.iani.playerUUIDCache.core.NameHistoryData;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public class NameHistory {
-
     public static class NameChange implements Comparable<NameChange> {
-
-        private String newName;
-        private long date;
+        private final String newName;
+        private final long date;
 
         public NameChange(String newName, long date) {
-            com.google.common.base.Preconditions.checkNotNull(newName);
-            this.newName = newName;
+            this.newName = Objects.requireNonNull(newName, "newName");
             this.date = date;
         }
 
@@ -25,7 +24,7 @@ public class NameHistory {
          * @return new name
          */
         public String getNewName() {
-            return this.newName;
+            return newName;
         }
 
         /**
@@ -34,24 +33,22 @@ public class NameHistory {
          * @return date of the change
          */
         public long getDate() {
-            return this.date;
+            return date;
         }
 
         @Override
         public int hashCode() {
-            int result = this.newName.hashCode();
-            result += 31 * Long.hashCode(this.date);
+            int result = newName.hashCode();
+            result += 31 * Long.hashCode(date);
             return result;
         }
 
         @Override
         public boolean equals(Object other) {
-            if (!(other instanceof NameChange)) {
+            if (!(other instanceof NameChange onc)) {
                 return false;
             }
-
-            NameChange onc = (NameChange) other;
-            return this.newName.equals(onc.newName) && this.date == onc.date;
+            return newName.equals(onc.newName) && date == onc.date;
         }
 
         @Override
@@ -59,29 +56,18 @@ public class NameHistory {
             if (other == null) {
                 throw new NullPointerException();
             }
-
-            return Long.compare(this.date, other.date);
+            return Long.compare(date, other.date);
         }
     }
 
-    private final UUID uuid;
-    private final String firstName;
+    private final NameHistoryData data;
     private final List<NameChange> changes;
 
-    private long cacheLoadTime;
-
     public NameHistory(UUID uuid, String firstName, List<NameChange> changes, long cacheLoadTime) {
-        com.google.common.base.Preconditions.checkNotNull(uuid);
-        com.google.common.base.Preconditions.checkNotNull(firstName);
-        com.google.common.base.Preconditions.checkNotNull(changes);
-
-        this.uuid = uuid;
-        this.firstName = firstName;
-        changes = new ArrayList<>(changes);
-        changes.sort(null);
-        this.changes = Collections.unmodifiableList(changes);
-
-        this.cacheLoadTime = cacheLoadTime;
+        ArrayList<NameChange> sortedChanges = new ArrayList<>(Objects.requireNonNull(changes, "changes"));
+        sortedChanges.sort(null);
+        this.changes = Collections.unmodifiableList(sortedChanges);
+        data = new NameHistoryData(uuid, firstName, toCoreChanges(sortedChanges), cacheLoadTime);
     }
 
     /**
@@ -90,7 +76,7 @@ public class NameHistory {
      * @return player's uuid
      */
     public UUID getUUID() {
-        return this.uuid;
+        return data.getUUID();
     }
 
     /**
@@ -99,7 +85,7 @@ public class NameHistory {
      * @return first name of the player
      */
     public String getFirstName() {
-        return this.firstName;
+        return data.getFirstName();
     }
 
     /**
@@ -108,7 +94,7 @@ public class NameHistory {
      * @return list of name changes
      */
     public List<NameChange> getNameChanges() {
-        return this.changes;
+        return changes;
     }
 
     /**
@@ -124,11 +110,7 @@ public class NameHistory {
      * @return the name the player with this history had at the given date
      */
     public String getName(long date) {
-        NameChange change = getLastChange(date);
-        if (change == null) {
-            return this.firstName;
-        }
-        return change.getNewName();
+        return data.getName(date);
     }
 
     /**
@@ -144,30 +126,22 @@ public class NameHistory {
      * @return the name the player with this history had at the given date
      */
     public String getName(Date date) {
-        return getName(date.getTime());
-    }
-
-    private NameChange getLastChange(long date) {
-        if (this.changes.isEmpty() || this.changes.get(0).getDate() > date) {
-            return null;
-        }
-
-        int upper = this.changes.size();
-        int lower = 0;
-        while (upper - lower > 1) {
-            int index = (upper - lower) / 2 + lower;
-            if (this.changes.get(index).getDate() <= date) {
-                lower = index;
-            } else {
-                upper = index;
-            }
-        }
-
-        return this.changes.get(lower);
+        return data.getName(date);
     }
 
     long getCacheLoadTime() {
-        return this.cacheLoadTime;
+        return data.getCacheLoadTime();
     }
 
+    NameHistoryData toData() {
+        return data;
+    }
+
+    private static ArrayList<NameHistoryData.NameChange> toCoreChanges(List<NameChange> changes) {
+        ArrayList<NameHistoryData.NameChange> result = new ArrayList<>();
+        for (NameChange change : changes) {
+            result.add(new NameHistoryData.NameChange(change.getNewName(), change.getDate()));
+        }
+        return result;
+    }
 }

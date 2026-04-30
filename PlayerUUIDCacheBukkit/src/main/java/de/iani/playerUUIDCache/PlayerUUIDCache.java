@@ -41,13 +41,9 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     public static final long PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME = 1000 * 60 * 30;// 30 minutes
 
     protected PluginConfig config;
-    protected HashMap<String, CachedPlayer> playersByName;
-    protected HashMap<UUID, CachedPlayer> playersByUUID;
     protected HashMap<UUID, CachedPlayerProfile> playerProfiles;
-    protected HashMap<UUID, NameHistory> nameHistories;
     protected UUIDDatabase database;
 
-    private BinaryStorage binaryStorage;
     private PlayerUUIDCacheCore core;
 
     private volatile int profilePropertiesLookups;
@@ -105,10 +101,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     private synchronized void closeDatabase() {
-        if (binaryStorage != null) {
-            binaryStorage.close();
-            binaryStorage = null;
-        }
         if (database != null) {
             database.disconnect();
             database = null;
@@ -123,15 +115,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         closeDatabase();
         super.reloadConfig();
         config = new PluginConfig(this);
-        if (config.getMemoryCacheExpirationTime() != 0) {
-            playersByName = new HashMap<>();
-            playersByUUID = new HashMap<>();
-            nameHistories = new HashMap<>();
-        } else {
-            playersByName = null;
-            playersByUUID = null;
-            nameHistories = null;
-        }
         if (config.useSQL()) {
             try {
                 database = new UUIDDatabase(config.getSqlConfig());
@@ -147,11 +130,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     private CacheConfig toCoreConfig() {
-        de.iani.playerUUIDCache.core.SQLConfig sqlConfig = null;
-        if (config.useSQL()) {
-            SQLConfig sql = config.getSqlConfig();
-            sqlConfig = new de.iani.playerUUIDCache.core.SQLConfig(sql.getHost(), sql.getUser(), sql.getPassword(), sql.getDatabase(), sql.getTableName(), sql.getProfilesTableName(), sql.getNameHistoriesTableName(), sql.getNameChangesTableName());
-        }
+        de.iani.playerUUIDCache.core.SQLConfig sqlConfig = config.useSQL() ? config.getSqlConfig() : null;
         return new CacheConfig(config.getMemoryCacheExpirationTime(), config.getNameHistoryCacheExpirationTime(), config.useSQL(), sqlConfig);
     }
 
@@ -352,13 +331,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         if (entries == null || entries.length == 0) {
             return;
         }
-        if (playersByUUID != null && playersByName != null) {
-            for (CachedPlayer entry : entries) {
-                playersByUUID.put(entry.getUUID(), entry);
-                playersByName.put(entry.getName().toLowerCase(), entry);
-            }
-        }
-        core.updateEntries(updateDB, toData(entries));
+        core.updateEntries(updateDB, entries);
     }
 
     protected synchronized void updateProfileProperties(boolean updateDB, CachedPlayerProfile entry) {
@@ -494,14 +467,11 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     protected synchronized void updateHistory(boolean updateDB, NameHistory history) {
-        if (nameHistories != null) {
-            nameHistories.put(history.getUUID(), history);
-        }
         core.updateHistory(updateDB, toData(history));
     }
 
     private CachedPlayer fromData(CachedPlayerData data) {
-        return data == null ? null : new CachedPlayer(data.getUUID(), data.getName(), data.getLastSeen(), data.getCacheLoadTime());
+        return data == null ? null : data instanceof CachedPlayer player ? player : new CachedPlayer(data.getUUID(), data.getName(), data.getLastSeen(), data.getCacheLoadTime());
     }
 
     private ArrayList<CachedPlayer> fromData(Collection<CachedPlayerData> data) {
@@ -510,18 +480,6 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             for (CachedPlayerData player : data) {
                 result.add(fromData(player));
             }
-        }
-        return result;
-    }
-
-    private CachedPlayerData toData(CachedPlayer player) {
-        return new CachedPlayerData(player.getUUID(), player.getName(), player.getLastSeen(), player.getCacheLoadTime());
-    }
-
-    private CachedPlayerData[] toData(CachedPlayer[] players) {
-        CachedPlayerData[] result = new CachedPlayerData[players.length];
-        for (int i = 0; i < players.length; i++) {
-            result[i] = toData(players[i]);
         }
         return result;
     }
@@ -538,11 +496,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     private NameHistoryData toData(NameHistory history) {
-        ArrayList<NameHistoryData.NameChange> changes = new ArrayList<>();
-        for (NameChange change : history.getNameChanges()) {
-            changes.add(new NameHistoryData.NameChange(change.getNewName(), change.getDate()));
-        }
-        return new NameHistoryData(history.getUUID(), history.getFirstName(), changes, history.getCacheLoadTime());
+        return history.toData();
     }
 
     private class BukkitCachePlatform implements CachePlatform {
