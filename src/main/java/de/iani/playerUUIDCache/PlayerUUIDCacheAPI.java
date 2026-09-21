@@ -190,6 +190,12 @@ public interface PlayerUUIDCacheAPI {
     void loadAllPlayersFromDatabase();
 
     /**
+     * Returns an immutable snapshot of all accounts known to this cache. The database is preferred
+     * when configured; implementations may fall back to the in-memory cache.
+     */
+    Collection<CachedPlayer> getAllKnownPlayers();
+
+    /**
      * Gets a NameHistory for a UUID.
      * The result may be null if this player's history is not found in the cache.
      *

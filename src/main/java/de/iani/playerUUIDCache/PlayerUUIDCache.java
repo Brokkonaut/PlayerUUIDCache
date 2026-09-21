@@ -584,6 +584,23 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
     }
 
+    @Override
+    public Collection<CachedPlayer> getAllKnownPlayers() {
+        if (database != null) {
+            databaseQueries++;
+            try {
+                Set<CachedPlayer> players = database.getAllPlayers();
+                updateEntries(false, players.toArray(new CachedPlayer[0]));
+                return List.copyOf(players);
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to load all known players", e);
+            }
+        }
+        synchronized (this) {
+            return playersByUUID == null ? List.of() : List.copyOf(playersByUUID.values());
+        }
+    }
+
     public synchronized void updateEntries(boolean updateDB, CachedPlayer... entries) {
         if (entries == null || entries.length == 0) {
             return;
