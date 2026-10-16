@@ -2,6 +2,7 @@ package de.iani.playerUUIDCache;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import de.iani.playerUUIDCache.NameHistory.NameChange;
+import de.iani.playerUUIDCache.util.SimpleSingleThreadExecutor;
 import de.iani.playerUUIDCache.util.fetcher.NameFetcher;
 import de.iani.playerUUIDCache.util.fetcher.ProfileFetcher;
 import de.iani.playerUUIDCache.util.fetcher.UUIDFetcher;
@@ -24,7 +25,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
@@ -74,7 +74,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public void onEnable() {
-        profileFetcherExecutor = Executors.newSingleThreadExecutor();
+        profileFetcherExecutor = new SimpleSingleThreadExecutor(this);
         saveDefaultConfig();
         reloadConfig();
 
@@ -677,6 +677,36 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         }
     }
 
+    public CachedPlayerProfile getPlayerProfileIgnoreCacheTimeout(UUID playerUUID) {
+        profilePropertiesLookups++;
+        synchronized (this) {
+            if (playerProfiles != null) {
+                CachedPlayerProfile entry = playerProfiles.get(playerUUID);
+                if (entry != null) {
+                    long now = System.currentTimeMillis();
+                    if (database == null || entry.getCacheLoadTime() + PROFILE_PROPERTIES_LOCAL_CACHE_EXPIRATION_TIME > now) {
+                        return entry;
+                    } else {
+                        playerProfiles.remove(playerUUID);
+                    }
+                }
+            }
+        }
+        if (database != null) {
+            try {
+                profilePropertiesLookupQueries++;
+                CachedPlayerProfile entry = database.getPlayerProfile(playerUUID);
+                if (entry != null) {
+                    updateProfileProperties(false, entry);
+                    return entry;
+                }
+            } catch (SQLException e) {
+                getLogger().log(Level.SEVERE, "Error while trying to access the database", e);
+            }
+        }
+        return null;
+    }
+
     public CachedPlayerProfile getPlayerProfile(UUID playerUUID) {
         profilePropertiesLookups++;
         synchronized (this) {
@@ -744,7 +774,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     protected CachedPlayerProfile getPlayerProfileFromMojang(UUID playerUUID, boolean waitAndRetryOnTooManyRequests) {
         mojangQueries++;
         try {
-            CachedPlayerProfile entry = new ProfileFetcher(playerUUID, waitAndRetryOnTooManyRequests).call();
+            CachedPlayerProfile entry = new ProfileFetcher(this, playerUUID, waitAndRetryOnTooManyRequests).call();
             if (entry != null) {
                 updateProfileProperties(true, entry);
             }

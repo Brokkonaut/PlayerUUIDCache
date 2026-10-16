@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import de.iani.playerUUIDCache.CachedPlayerProfile;
+import de.iani.playerUUIDCache.PlayerUUIDCache;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -23,10 +24,12 @@ public class ProfileFetcher implements Callable<CachedPlayerProfile> {
     private static final String PROFILE_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";
     private static final String PROFILE_URL2 = "?unsigned=false";
 
+    private final PlayerUUIDCache plugin;
     private final UUID uuid;
     private final boolean waitAndRetryOnTooManyRequests;
 
-    public ProfileFetcher(UUID uuid, boolean waitAndRetryOnTooManyRequests) {
+    public ProfileFetcher(PlayerUUIDCache plugin, UUID uuid, boolean waitAndRetryOnTooManyRequests) {
+        this.plugin = plugin;
         this.uuid = uuid;
         this.waitAndRetryOnTooManyRequests = waitAndRetryOnTooManyRequests;
     }
@@ -45,6 +48,7 @@ public class ProfileFetcher implements Callable<CachedPlayerProfile> {
                 if (e.getMessage().startsWith("Server returned HTTP response code: 403")) {
                     return new CachedPlayerProfile(uuid, Set.of()); // user not found
                 } else if (waitAndRetryOnTooManyRequests && waitTimeSeconds < 600 && e.getMessage().startsWith("Server returned HTTP response code: 429")) {
+                    plugin.getLogger().info("Waiting " + waitTimeSeconds + " seconds because of too many requests while fetching textures for " + uuid);
                     Thread.sleep(Duration.of(waitTimeSeconds, ChronoUnit.SECONDS));
                     waitTimeSeconds *= 1.5;
                     continue;
