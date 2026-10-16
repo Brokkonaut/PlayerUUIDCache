@@ -21,6 +21,11 @@ public class CachedPlayerProfile {
 
     private final long expiration;
 
+    public CachedPlayerProfile(UUID uuid, Set<ProfileProperty> properties) {
+        long now = System.currentTimeMillis();
+        this(uuid, properties, now, now);
+    }
+
     public CachedPlayerProfile(UUID uuid, Set<ProfileProperty> properties, long lastSeen, long cacheLoadTime) {
         com.google.common.base.Preconditions.checkNotNull(uuid);
         this.uuid = uuid;

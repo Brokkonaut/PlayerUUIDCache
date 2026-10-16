@@ -23,6 +23,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
@@ -68,8 +70,11 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     private volatile int profilePropertiesLookupQueries;
     private boolean hasProfileAPI;
 
+    private ExecutorService profileFetcherExecutor;
+
     @Override
     public void onEnable() {
+        profileFetcherExecutor = Executors.newSingleThreadExecutor();
         saveDefaultConfig();
         reloadConfig();
 
@@ -120,6 +125,10 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
 
     @Override
     public void onDisable() {
+        if (profileFetcherExecutor != null) {
+            profileFetcherExecutor.shutdownNow(); // remaining requests are never processed but that is ok when the server is shutting down
+            profileFetcherExecutor = null;
+        }
         closeDatabase();
     }
 
@@ -699,8 +708,8 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
     }
 
     public Future<CachedPlayerProfile> loadPlayerProfileAsynchronously(final UUID playerUUID) {
-        FutureTask<CachedPlayerProfile> futuretask = new FutureTask<>(() -> getPlayerProfileFromMojang(playerUUID));
-        getServer().getScheduler().runTaskAsynchronously(this, futuretask);
+        FutureTask<CachedPlayerProfile> futuretask = new FutureTask<>(() -> getPlayerProfileFromMojang(playerUUID, true));
+        profileFetcherExecutor.submit(futuretask);
         return futuretask;
     }
 
@@ -709,7 +718,7 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
         if (entry != null || !queryMojangIfUnknown) {
             return entry;
         }
-        return getPlayerProfileFromMojang(playerUUID);
+        return getPlayerProfileFromMojang(playerUUID, false);
     }
 
     public void getPlayerProfileAsynchronously(final UUID playerUUID, final Callback<CachedPlayerProfile> synchronousCallback) {
@@ -724,18 +733,18 @@ public class PlayerUUIDCache extends JavaPlugin implements PlayerUUIDCacheAPI {
             }
             return;
         }
-        getServer().getScheduler().runTaskAsynchronously(this, (Runnable) () -> {
-            final CachedPlayerProfile p = getPlayerProfileFromMojang(playerUUID);
+        profileFetcherExecutor.submit(() -> {
+            final CachedPlayerProfile p = getPlayerProfileFromMojang(playerUUID, true);
             if (synchronousCallback != null) {
                 getServer().getScheduler().runTask(PlayerUUIDCache.this, (Runnable) () -> synchronousCallback.onComplete(p));
             }
         });
     }
 
-    protected CachedPlayerProfile getPlayerProfileFromMojang(UUID playerUUID) {
+    protected CachedPlayerProfile getPlayerProfileFromMojang(UUID playerUUID, boolean waitAndRetryOnTooManyRequests) {
         mojangQueries++;
         try {
-            CachedPlayerProfile entry = new ProfileFetcher(playerUUID).call();
+            CachedPlayerProfile entry = new ProfileFetcher(playerUUID, waitAndRetryOnTooManyRequests).call();
             if (entry != null) {
                 updateProfileProperties(true, entry);
             }
